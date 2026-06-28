@@ -831,17 +831,77 @@ function showGraphFallback() {
     "</div>";
 }
 
+/* ---- On-screen diagnostic (visible without DevTools) ----
+   Captures JS errors and detects a stalled render loop, then prints the
+   findings over the graph so a screenshot is enough to diagnose. */
+const __diag = { errors: [], frames: 0, started: Date.now() };
+function showDiag(extra) {
+  let box = document.getElementById("graph-diag");
+  if (!box) {
+    box = document.createElement("div");
+    box.id = "graph-diag";
+    box.style.cssText =
+      "position:absolute;left:10px;right:10px;top:10px;z-index:60;" +
+      "font:11px/1.5 ui-monospace,Menlo,monospace;background:rgba(20,0,0,0.9);" +
+      "color:#ff8a8a;padding:10px 12px;border-radius:8px;white-space:pre-wrap;" +
+      "border:1px solid #ff5555;max-height:90%;overflow:auto;";
+    canvasEl.style.position = "relative";
+    canvasEl.appendChild(box);
+  }
+  const cvs = canvasEl.querySelector("canvas");
+  const lines = [
+    "GRAPH DIAGNOSTIC",
+    "ForceGraph lib: " + (typeof window.ForceGraph),
+    "Graph created: " + !!Graph,
+    "renderer: " + (useFullRenderer ? "full" : "safe"),
+    "canvas el: " + (cvs ? cvs.width + "x" + cvs.height + " (css " + cvs.style.width + ")" : "MISSING"),
+    "client box: " + canvasEl.clientWidth + "x" + canvasEl.clientHeight,
+    "DPR: " + window.devicePixelRatio,
+    "frames seen: " + __diag.frames,
+    "hardware accel: " + detectWebGL(),
+    extra || "",
+    __diag.errors.length ? "ERRORS:\n" + __diag.errors.join("\n") : "no JS errors captured",
+  ];
+  box.textContent = lines.filter(Boolean).join("\n");
+}
+function detectWebGL() {
+  try {
+    const c = document.createElement("canvas");
+    const gl = c.getContext("webgl") || c.getContext("experimental-webgl");
+    if (!gl) return "WebGL UNAVAILABLE";
+    const dbg = gl.getExtension("WEBGL_debug_renderer_info");
+    return dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : "WebGL ok";
+  } catch (e) { return "WebGL error: " + e.message; }
+}
+window.addEventListener("error", e => {
+  __diag.errors.push((e.message || "error") + (e.filename ? " @ " + e.filename.split("/").pop() + ":" + e.lineno : ""));
+  showDiag();
+});
+window.addEventListener("unhandledrejection", e => {
+  __diag.errors.push("promise: " + (e.reason && e.reason.message ? e.reason.message : e.reason));
+  showDiag();
+});
+
 window.addEventListener("load", () => {
   if (window.ForceGraph) {
     try {
       initGraph();
+      if (Graph) Graph.onRenderFramePre(() => { __diag.frames++; });
     } catch (err) {
       console.error("Graph init failed:", err);
-      showGraphFallback();
+      __diag.errors.push("init: " + err.message);
+      showDiag("initGraph() threw");
     }
   } else {
     console.error("force-graph library failed to load.");
-    showGraphFallback();
+    showDiag("force-graph library did not load");
   }
   animateCounters();
+
+  // Watchdog: if the graph is in view but no frames have painted, surface it.
+  setTimeout(() => {
+    if (__diag.frames === 0 && !document.hidden) {
+      showDiag("RENDER LOOP STALLED — 0 frames painted");
+    }
+  }, 4000);
 });
