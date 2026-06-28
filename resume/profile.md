@@ -1,60 +1,196 @@
 # Kunhee (Geoffrey) Kim
 
-**Email:** (add) | **LinkedIn:** (add) | **GitHub:** (add) | **Location:** (add)
+**Email:** kunheekim02@gmail.com
+**LinkedIn:** https://www.linkedin.com/in/kk02/
+**GitHub:** https://github.com/kheekim02
+**Location:** Berkeley / Bay Area, CA
 
 ---
 
 ## Summary
 
-UC Berkeley Data Science graduate (May 2026) with strengths in Python, SQL, Spark, data engineering, and full-stack development. Experience building data pipelines and analytics systems, including work at an asset management firm and personal projects (Alpha Signals, PathWise).
+Data engineer and UC Berkeley Data Science graduate (May 2026) specializing in building and
+scaling production data pipelines, research databases, and ML/NLP systems. Experienced
+architecting multi-terabyte data lakes and warehouses (PostgreSQL, Neo4j, Spark), engineering
+robust ETL with strict data-integrity guarantees, and operating split-host Linux/Windows
+infrastructure. Bilingual in English and Korean.
 
 ---
 
 ## Education
 
-**University of California, Berkeley** — B.A. Data Science  
-*May 2026*
+**University of California, Berkeley** — B.A. Data Science
+*Graduated May 2026*
 
 ---
 
 ## Skills
 
-**Languages:** Python, SQL, JavaScript/TypeScript (add if applicable)  
-**Data & Analytics:** Apache Spark, data warehousing, data lakes, ETL/ELT, (add: Airflow, dbt, etc.)  
-**Full Stack:** (add frameworks — React, FastAPI, etc.)  
-**Languages (human):** English (fluent), Korean (fluent)
+**Languages:** Python, SQL, Swift, Bash/Shell, PowerShell
+**Data Engineering:** ETL/ELT pipeline design, data lake & warehouse architecture, schema design,
+idempotent ingestion, deduplication, point-in-time data alignment, web scraping
+**Big Data & Databases:** PostgreSQL (TOAST tuning, query planner diagnostics, performance tuning),
+Neo4j (knowledge graphs), Apache Spark, PostGIS, SQLite
+**Python Stack:** Pandas, Polars, concurrent.futures, BeautifulSoup, requests, psycopg3/pg8000,
+SQLAlchemy, FastAPI, Pydantic
+**ML / NLP:** Local LLM inference (Ollama, vLLM, gpt-oss:20b), prompt engineering, Graph Neural
+Networks (GNN), FinBERT, entity resolution, backtesting, event studies
+**DevOps / Infra:** Linux administration, cron/systemd, SSH tunneling, nohup background loops,
+pg_dump/pg_restore, scp/rsync, Docker, Render, GPU resource management
+**Full Stack / Mobile:** SwiftUI, MapKit, CoreLocation, ActivityKit, AVFoundation, REST APIs
+**BI / Visualization:** Tableau, dashboard design, technical writing
+**Spoken Languages:** English (fluent), Korean (fluent)
 
 ---
 
 ## Experience
 
-### Asset Management Firm — Data / Analytics Intern
-*(add dates, company name)*
+### Global Key Advisors — Financial Data Analyst
+*January 2026 – Present*
 
-- (add bullet 1)
-- (add bullet 2)
-- (add bullet 3)
+Quantitative intelligence work spanning data engineering, database administration, NLP/ML,
+research, and DevOps.
+
+**Data Engineering & Pipelines**
+- Re-architected SEC EDGAR web-scraping pipelines (8-K, 10-K, 10-Q, Form 15/25 delisting filings)
+  from a memory-constrained local CSV approach to a threaded PostgreSQL integration, expanding the
+  data lake to 2.05M+ text filings and 3.3M+ financial records across 28,000+ entities without
+  hitting legacy 1 GB file limits.
+- Automated daily ingestion of a 1.12 GB split-adjusted historical price panel from a remote
+  Windows host (Zeus) to a Linux Spark cluster, deprecating a fragile Yahoo Finance pipeline,
+  eliminating SEC IP-ban risk, and saving hours of manual data alignment per week.
+- Built robust data-alignment logic — CIK-aligned joins, point-in-time identifier mapping, and
+  strict vendor deduplication (Tiingo vs. Yahoo Finance) — to prevent silent data corruption.
+- Implemented strict SEC rate-limiting (<10 req/s) and idempotent upserts (ON CONFLICT DO NOTHING)
+  so pipelines safely resume after network interruptions.
+- *Tools: Python, Pandas, Polars, concurrent.futures, BeautifulSoup, requests, REST APIs.*
+
+**SQL & Database Management**
+- Administered a PostgreSQL research database (sec_data) holding 2M+ text filings and 33M+
+  historical financial records.
+- Architected modular schemas (edgar, reference, market_data, graph, facts) and debugged query
+  planner inaccuracies using system catalog views (pg_stat_user_tables) and ANALYZE statistics.
+- Diagnosed and optimized storage behavior, tuning PostgreSQL's TOAST strategy for 42 GB of
+  oversized variable-length text payloads.
+- *Tools: PostgreSQL, psycopg3/pg8000, schema design, performance tuning, advanced/diagnostic SQL.*
+
+**NLP, ML & Knowledge Graphs**
+- Maintained NLP extraction pipelines using local LLMs (Ollama, gpt-oss:20b) to parse unstructured
+  filing text into directed corporate relationship edges (supplier, customer, acquirer) stored in a
+  Neo4j knowledge graph.
+- Designed entity-resolution algorithms combining exact alias matches, ticker lookups, point-in-time
+  identifiers, and SHA-256 fallback hashing.
+- Automated structured extraction of atomic events and risk factors (Item 1 / 1A) using Pydantic
+  schemas, strict confidence floors, and verbatim quote verification.
+- Engineered an asynchronous NLP pipeline processing ~480 filings/hour continuously with no manual
+  intervention.
+- Transitioned prediction strategy from legacy 1D text sentiment (FinBERT) toward Graph Neural
+  Networks based on rigorous out-of-sample backtesting and slippage analysis.
+- *Tools: Ollama/vLLM, prompt engineering, Pydantic, regex, Neo4j, GNN, backtesting.*
+
+**Dashboards, Reports & Research**
+- Supported "SEC Event Radar" workflows, converting unstructured filing notes into actionable
+  corporate event and listing/uplisting candidates for downstream users.
+- Evaluated predictive power of SEC filing items against historical returns with rigorous holdout
+  discipline and event-study parameters.
+- Authored executive walk-throughs, technical runbooks, and AI-assisted documentation on what
+  filing-derived signals can and cannot statistically prove.
+- *Tools: data analysis, event studies, technical writing, dashboard design.*
+
+**Operations & DevOps**
+- Managed a split-brain architecture between a Windows warehouse host and a remote Linux analytics
+  node (spark-f029), maintaining environmental parity.
+- Orchestrated daily cron jobs, systemd timers, and nohup background loops coordinating data pushes,
+  paper-trading engines, and ML inference batches.
+- Authored and executed database restore runbooks using pg_dump/pg_restore, scp, and rsync for
+  multi-gigabyte warehouse transfers.
+- Troubleshot infra failures including SSH tunnel socket collisions, stale PostgreSQL statistics,
+  and GPU VRAM contention.
+- *Tools: Bash/shell, Linux admin, cron/systemd, SSH tunneling, Windows PowerShell.*
+
+**Key Wins**
+- Prevented deployment of a flawed strategy: out-of-sample backtesting exposed lookahead bias in a
+  legacy FinBERT sentiment model, proving a perceived +2.39% mean return collapsed to negative under
+  a realistic 30-bps transaction penalty — saving the firm from a losing strategy.
 
 ---
 
 ## Projects
 
-### Alpha Signals
-*(add 1–2 sentence description + tech stack)*
+### Alpha Signals — Quantitative SEC Event Research Pipeline
+*Python, Pandas, Polars, PostgreSQL, Neo4j, Ollama (gpt-oss:20b), GNN, FinBERT (legacy)*
 
-- (add bullet)
+A quantitative research pipeline evaluating the predictive power of corporate events disclosed in
+SEC filings (8-Ks, 10-Ks) on subsequent stock returns. Evolved from 1D text sentiment analysis to a
+Graph Neural Network predicting crashes and mispricings from the topological structure of discrete
+corporate events.
 
-### PathWise — Route Application
-*(add 1–2 sentence description + tech stack)*
+- Built reproducible Python pipelines connecting the `edgar.filings` text repository to
+  `market_data.prices_daily` returns via CIK-aligned joins and strict vendor deduplication.
+- Pioneered the move away from text sentiment scoring by injecting structured "atomic events"
+  (corporate restructuring, going-concern warnings) directly into a Neo4j knowledge graph as nodes
+  and edges.
+- Managed a daily Paper Trading Engine on a Linux Spark cluster to absorb generated alpha signals,
+  execute simulated trades, and dynamically track portfolio P&L.
+- Authored executive memos on the statistical limits of filing-derived signals, addressing lookahead
+  bias and event-window alignment constraints.
+- **Impact:** Prevented deployment of a flawed NLP strategy by proving a perceived +2.39% mean
+  return was manufactured by lookahead bias; established a fully autonomous daily orchestration
+  pipeline generating signals, simulating trades, and updating GNN predictions by 04:30 PDT each
+  trading day.
 
-- (add bullet)
+### PathWise — Intelligent iOS Running App
+*Swift (SwiftUI, MapKit, CoreLocation, ActivityKit, AVFoundation), Python (FastAPI, SQLAlchemy),
+Docker, Render, PostgreSQL + PostGIS, GraphHopper, Open-Meteo, Overpass (OSM), Socrata/511*
+
+An iOS running app that dynamically generates elevation-controlled, geofenced routing loops and
+guides runners with native turn-by-turn audio navigation and Live Activities. **Role: Full-Stack
+Architect & Lead Developer.**
+
+- Architected a custom pathfinding orchestrator integrating GraphHopper with PostGIS to inject
+  real-time safety geofences, road closures, and scenic modifiers into generated routes.
+- Built a native iOS client from scratch with custom turn-by-turn voice navigation (AVFoundation
+  audio ducking) and interactive elevation previews.
+- Integrated ActivityKit to push live heads-up navigation to the lock screen and Dynamic Island.
+- Engineered an asynchronous backend pipeline that autonomously ingests, grids, and scores
+  municipal crime and traffic data every 30 minutes to update routing parameters.
+- **Impact:** Sub-2-second route generation via parallelized spatial queries and environmental API
+  fetches; eliminated the "route spiking" failure common in competing loop generators via strict
+  geographic bounding; designed a database-agnostic fallback (SQLite memory bypass) ensuring 100%
+  routing uptime during DB migrations/outages. Presented at Berkeley's startup pitch competition.
 
 ---
 
-## Keywords to emphasize (for DE / DA roles)
+## Research & Additional Experience
 
-- Data warehouse, data lake, lakehouse
-- ETL/ELT pipelines, batch processing
-- SQL optimization, dimensional modeling
-- Python, PySpark, Apache Spark
-- Cloud: (AWS / GCP / Azure — add yours)
+### Student Researcher — UC Berkeley (Prof. Jill Berrick, *FamiliesNotFees*)
+- Applied statistical modeling and machine learning to national child-welfare datasets to deliver
+  actionable insights for state lawmakers and policy advocates.
+- Built interactive Tableau dashboards as decision-support tools and developed the project website
+  from scratch (HTML/CSS, built with Cursor + Claude).
+- Migrated the platform from Weebly to WordPress and optimized digital presence, growing reach to
+  2,000+ views and 700+ unique visitors.
+
+### Course Coordinator — ENGIN 270B, UC Berkeley (Summer 2025)
+- Managed operations for a graduate leadership course (Prof. Bulent Erbilgin) serving 100+ students
+  across three sections; ran bCourses management and technical support for faculty and guest
+  speakers.
+- Tracked attendance/participation each session and gave direct feedback; built automated Excel
+  tracking systems with advanced formulas to streamline grading and surface data-driven metrics for
+  curriculum improvement.
+
+### Berkeley Data Discovery — AI & Education Analytics
+*A Meta-Analysis of National Transfer Metrics*
+- Conducted a meta-analysis of national transfer metrics using AI-driven education analytics to
+  identify trends for improving student credit-transfer pathways and outcomes.
+- Leveraged machine learning on large-scale education datasets and built interactive business
+  dashboards to support strategic decision-making in higher education.
+
+---
+
+## Keywords to emphasize (DE / DA roles)
+
+data lake, data warehouse, ETL/ELT, pipeline, PostgreSQL, SQL, Spark, Python, Pandas, Polars,
+Neo4j, knowledge graph, schema design, performance tuning, deduplication, idempotent, ingestion,
+Tableau, dashboards, FastAPI, PostGIS, Docker, Linux, cron, orchestration, backtesting, NLP, LLM,
+GNN, entity resolution
