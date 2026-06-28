@@ -118,26 +118,15 @@ research, and DevOps.
 ## Projects
 
 ### Alpha Signals — Quantitative SEC Event Research Pipeline
-*Python, Pandas, Polars, PostgreSQL, Neo4j, Ollama (gpt-oss:20b), GNN, FinBERT (legacy)*
+*Python, Polars, PostgreSQL, Neo4j, Ollama (gpt-oss:20b), Graph Neural Networks*
 
-A quantitative research pipeline evaluating the predictive power of corporate events disclosed in
-SEC filings (8-Ks, 10-Ks) on subsequent stock returns. Evolved from 1D text sentiment analysis to a
-Graph Neural Network predicting crashes and mispricings from the topological structure of discrete
-corporate events.
-
-- Built reproducible Python pipelines connecting the `edgar.filings` text repository to
-  `market_data.prices_daily` returns via CIK-aligned joins and strict vendor deduplication.
-- Pioneered the move away from text sentiment scoring by injecting structured "atomic events"
-  (corporate restructuring, going-concern warnings) directly into a Neo4j knowledge graph as nodes
-  and edges.
-- Managed a daily Paper Trading Engine on a Linux Spark cluster to absorb generated alpha signals,
-  execute simulated trades, and dynamically track portfolio P&L.
-- Authored executive memos on the statistical limits of filing-derived signals, addressing lookahead
-  bias and event-window alignment constraints.
-- **Impact:** Prevented deployment of a flawed NLP strategy by proving a perceived +2.39% mean
-  return was manufactured by lookahead bias; established a fully autonomous daily orchestration
-  pipeline generating signals, simulating trades, and updating GNN predictions by 04:30 PDT each
-  trading day.
+Self-directed research pipeline evaluating whether corporate events in SEC filings (8-Ks, 10-Ks)
+predict subsequent stock returns — evolving from 1D text sentiment to a Graph Neural Network over a
+Neo4j knowledge graph of discrete corporate events. Built reproducible Python pipelines joining
+filing text to historical returns, an autonomous daily orchestration loop (signals → simulated
+trades → GNN predictions by 04:30 PDT), and out-of-sample backtests that flagged lookahead bias in a
+legacy sentiment model. *(Foundational system behind my Global Key Advisors work; see above for
+production details.)*
 
 ### PathWise — Intelligent iOS Running App
 *Swift (SwiftUI, MapKit, CoreLocation, ActivityKit, AVFoundation), Python (FastAPI, SQLAlchemy),
