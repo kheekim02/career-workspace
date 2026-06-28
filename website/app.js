@@ -1,6 +1,6 @@
 /* ============================================================
    Kunhee (Geoffrey) Kim — portfolio
-   Vanilla JS: knowledge graph (force-graph) + i18n + counters
+   Enhanced knowledge graph: filters, clustering, particles, 2D/3D
    ============================================================ */
 
 /* ---------- 1. Graph data model ---------- */
@@ -11,158 +11,429 @@ const COLORS = {
   skill:   "#c084fc",
 };
 
+const GROUP_ANCHORS = {
+  person:  { x: 0,   y: 0   },
+  org:     { x: -90, y: -70 },
+  project: { x: 90,  y: -50 },
+  skill:   { x: 0,   y: 95  },
+};
+
 const NODES = [
-  // Me
-  { id: "me", group: "person", label: "Geoffrey Kim", val: 26,
+  { id: "me", group: "person", label: "Geoffrey Kim",
     desc: "Data engineer & UC Berkeley Data Science graduate. I build production pipelines, data lakes/warehouses, and ML/NLP systems.",
     desc_ko: "데이터 엔지니어이자 UC 버클리 데이터 사이언스 졸업생. 프로덕션 파이프라인, 데이터 레이크/웨어하우스, ML/NLP 시스템을 구축합니다.",
     meta: ["Python", "SQL", "Spark", "Bilingual EN/KR"] },
-
-  // Organizations
-  { id: "gka", group: "org", label: "Global Key Advisors", val: 16,
+  { id: "gka", group: "org", label: "Global Key Advisors",
     desc: "Financial Data Analyst (Jan 2026–Present). Built SEC data pipelines, a PostgreSQL research warehouse, and NLP/graph systems for quant research.",
     desc_ko: "재무 데이터 분석가 (2026년 1월–현재). SEC 데이터 파이프라인, PostgreSQL 연구 웨어하우스, 퀀트 리서치용 NLP/그래프 시스템을 구축했습니다.",
     meta: ["Jan 2026 – Present", "Data Engineering", "Quant Research"] },
-  { id: "berkeley", group: "org", label: "UC Berkeley", val: 16,
+  { id: "berkeley", group: "org", label: "UC Berkeley",
     desc: "B.A. Data Science, May 2026. GPA 3.81, completed in 3 years. Changemaker & Entrepreneurship & Technology (SCET) certificates.",
     desc_ko: "데이터 사이언스 학사, 2026년 5월. GPA 3.81, 3년 만에 졸업. Changemaker 및 기업가정신·기술(SCET) 수료증 취득.",
     meta: ["B.A. Data Science", "GPA 3.81", "2026"] },
-
-  // Projects
-  { id: "alpha", group: "project", label: "Alpha Signals", val: 18,
+  { id: "alpha", group: "project", label: "Alpha Signals",
     desc: "Quant SEC-event research pipeline. Tests whether corporate events in filings predict returns — from text sentiment to a GNN over a Neo4j knowledge graph, fully autonomous daily.",
     desc_ko: "퀀트 SEC 이벤트 리서치 파이프라인. 공시의 기업 이벤트가 수익률을 예측하는지 검증 — 텍스트 감성 분석에서 Neo4j 지식 그래프 기반 GNN까지, 완전 자동화된 일일 실행.",
     meta: ["Python", "Neo4j", "GNN", "PostgreSQL"], link: "https://github.com/kheekim02" },
-  { id: "pathwise", group: "project", label: "PathWise", val: 18,
+  { id: "pathwise", group: "project", label: "PathWise",
     desc: "Intelligent iOS running app generating elevation-controlled, geofenced routing loops with native turn-by-turn navigation. Sub-2-second route generation. Presented at Berkeley's startup pitch competition.",
     desc_ko: "고도 제어 및 지오펜스 기반 러닝 루트를 생성하는 지능형 iOS 러닝 앱. 네이티브 턴바이턴 내비게이션, 2초 미만 경로 생성. 버클리 스타트업 피치 대회에서 발표.",
     meta: ["Swift", "FastAPI", "PostGIS", "GraphHopper"], link: "https://github.com/kheekim02" },
-  { id: "fnf", group: "project", label: "FamiliesNotFees", val: 13,
+  { id: "fnf", group: "project", label: "FamiliesNotFees",
     desc: "Research with Prof. Jill Berrick: statistical modeling on national child-welfare data to inform foster-care policy. Built Tableau dashboards & the site (4,000+ views).",
     desc_ko: "Jill Berrick 교수와의 연구: 위탁 양육 정책 개선을 위한 전국 아동 복지 데이터 통계 모델링. Tableau 대시보드 및 웹사이트 구축 (4,000+ 조회수).",
     meta: ["Statistics", "Tableau", "Policy"] },
-
-  // Skills / tech
-  { id: "python",   group: "skill", label: "Python",     val: 12, desc: "Primary language: Pandas, Polars, FastAPI, concurrent pipelines.", desc_ko: "주력 언어: Pandas, Polars, FastAPI, 동시성 파이프라인.", meta: ["Pandas","Polars","FastAPI"] },
-  { id: "sql",      group: "skill", label: "SQL",        val: 12, desc: "Advanced SQL, schema design, query-planner diagnostics, performance tuning.", desc_ko: "고급 SQL, 스키마 설계, 쿼리 플래너 진단, 성능 튜닝.", meta: ["Schema design","Tuning"] },
-  { id: "postgres", group: "skill", label: "PostgreSQL", val: 13, desc: "Research warehouse: 33M+ records, TOAST tuning, modular schemas.", desc_ko: "연구 웨어하우스: 3,300만+ 레코드, TOAST 튜닝, 모듈식 스키마.", meta: ["Warehouse","TOAST"] },
-  { id: "neo4j",    group: "skill", label: "Neo4j",      val: 12, desc: "Knowledge graphs of corporate relationships extracted from filings.", desc_ko: "공시에서 추출한 기업 관계 지식 그래프.", meta: ["Knowledge graph"] },
-  { id: "spark",    group: "skill", label: "Spark",      val: 11, desc: "Distributed processing on a Linux analytics cluster.", desc_ko: "리눅스 분석 클러스터에서의 분산 처리.", meta: ["Distributed"] },
-  { id: "ml",       group: "skill", label: "ML / NLP",   val: 12, desc: "Local LLM inference (Ollama), Graph Neural Networks, entity resolution, backtesting.", desc_ko: "로컬 LLM 추론 (Ollama), 그래프 신경망, 엔티티 해상도, 백테스팅.", meta: ["LLM","GNN"] },
-  { id: "infra",    group: "skill", label: "Infra / DevOps", val: 11, desc: "Linux, cron/systemd, SSH tunneling, Docker, multi-host orchestration.", desc_ko: "리눅스, cron/systemd, SSH 터널링, Docker, 멀티 호스트 오케스트레이션.", meta: ["Linux","Docker"] },
-  { id: "swift",    group: "skill", label: "Swift / iOS", val: 11, desc: "SwiftUI, MapKit, ActivityKit, AVFoundation native development.", desc_ko: "SwiftUI, MapKit, ActivityKit, AVFoundation 네이티브 개발.", meta: ["SwiftUI","MapKit"] },
-  { id: "tableau",  group: "skill", label: "Tableau",    val: 10, desc: "Interactive dashboards for research & decision support.", desc_ko: "리서치 및 의사결정 지원을 위한 인터랙티브 대시보드.", meta: ["Dashboards"] },
+  { id: "python",   group: "skill", label: "Python",     desc: "Primary language: Pandas, Polars, FastAPI, concurrent pipelines.", desc_ko: "주력 언어: Pandas, Polars, FastAPI, 동시성 파이프라인.", meta: ["Pandas","Polars","FastAPI"] },
+  { id: "sql",      group: "skill", label: "SQL",        desc: "Advanced SQL, schema design, query-planner diagnostics, performance tuning.", desc_ko: "고급 SQL, 스키마 설계, 쿼리 플래너 진단, 성능 튜닝.", meta: ["Schema design","Tuning"] },
+  { id: "postgres", group: "skill", label: "PostgreSQL", desc: "Research warehouse: 33M+ records, TOAST tuning, modular schemas.", desc_ko: "연구 웨어하우스: 3,300만+ 레코드, TOAST 튜닝, 모듈식 스키마.", meta: ["Warehouse","TOAST"] },
+  { id: "neo4j",    group: "skill", label: "Neo4j",      desc: "Knowledge graphs of corporate relationships extracted from filings.", desc_ko: "공시에서 추출한 기업 관계 지식 그래프.", meta: ["Knowledge graph"] },
+  { id: "spark",    group: "skill", label: "Spark",      desc: "Distributed processing on a Linux analytics cluster.", desc_ko: "리눅스 분석 클러스터에서의 분산 처리.", meta: ["Distributed"] },
+  { id: "ml",       group: "skill", label: "ML / NLP",   desc: "Local LLM inference (Ollama), Graph Neural Networks, entity resolution, backtesting.", desc_ko: "로컬 LLM 추론 (Ollama), 그래프 신경망, 엔티티 해상도, 백테스팅.", meta: ["LLM","GNN"] },
+  { id: "infra",    group: "skill", label: "Infra / DevOps", desc: "Linux, cron/systemd, SSH tunneling, Docker, multi-host orchestration.", desc_ko: "리눅스, cron/systemd, SSH 터널링, Docker, 멀티 호스트 오케스트레이션.", meta: ["Linux","Docker"] },
+  { id: "swift",    group: "skill", label: "Swift / iOS", desc: "SwiftUI, MapKit, ActivityKit, AVFoundation native development.", desc_ko: "SwiftUI, MapKit, ActivityKit, AVFoundation 네이티브 개발.", meta: ["SwiftUI","MapKit"] },
+  { id: "tableau",  group: "skill", label: "Tableau",    desc: "Interactive dashboards for research & decision support.", desc_ko: "리서치 및 의사결정 지원을 위한 인터랙티브 대시보드.", meta: ["Dashboards"] },
 ];
 
 const LINKS = [
-  // me -> orgs / projects
   ["me","gka"], ["me","berkeley"], ["me","alpha"], ["me","pathwise"], ["me","fnf"],
-  // org -> project
   ["gka","alpha"], ["berkeley","fnf"], ["berkeley","pathwise"],
-  // project -> skills
   ["alpha","python"], ["alpha","postgres"], ["alpha","neo4j"], ["alpha","ml"], ["alpha","spark"], ["alpha","infra"],
   ["pathwise","swift"], ["pathwise","python"], ["pathwise","postgres"], ["pathwise","infra"],
   ["fnf","tableau"], ["fnf","sql"], ["fnf","ml"],
-  // me -> core skills
   ["me","python"], ["me","sql"],
 ];
 
-const graphData = {
-  nodes: NODES.map(n => ({ ...n })),
-  links: LINKS.map(([source, target]) => ({ source, target })),
-};
+/* ---------- 2. Degree + graph state ---------- */
+const DEGREE = {};
+NODES.forEach(n => { DEGREE[n.id] = 0; });
+LINKS.forEach(([s, t]) => { DEGREE[s]++; DEGREE[t]++; });
 
-/* ---------- 2. Build the force graph ---------- */
+function nodeSize(node) {
+  const d = DEGREE[node.id] || 1;
+  if (node.id === "me") return 22 + d * 1.2;
+  return 8 + d * 2.2;
+}
+
 const canvasEl = document.getElementById("graph-canvas");
-let Graph, hoverNode = null, highlightNodes = new Set(), highlightLinks = new Set();
+const modeBtn = document.getElementById("graph-mode");
+let Graph = null;
+let is3D = false;
+let hoverNode = null;
+let highlightNodes = new Set();
+let highlightLinks = new Set();
+let activeGroups = new Set(["person", "org", "project", "skill"]);
+let userInteracting = false;
+let idleTimer = null;
+let motionRaf = null;
+let cameraAngle = 0;
+let introDone = false;
+
+function nodeVisible(node) {
+  return activeGroups.has(node.group);
+}
+
+function linkVisible(link) {
+  const s = link.source.id || link.source;
+  const t = link.target.id || link.target;
+  const sn = NODES.find(n => n.id === s);
+  const tn = NODES.find(n => n.id === t);
+  return sn && tn && nodeVisible(sn) && nodeVisible(tn);
+}
+
+function buildGraphData() {
+  const nodes = NODES.filter(nodeVisible).map(n => ({
+    ...n,
+    val: nodeSize(n),
+    degree: DEGREE[n.id],
+  }));
+  const ids = new Set(nodes.map(n => n.id));
+  const links = LINKS
+    .filter(([s, t]) => ids.has(s) && ids.has(t))
+    .map(([source, target]) => ({ source, target }));
+  return { nodes, links };
+}
 
 function neighbors(node) {
-  const ns = new Set([node.id]); const ls = new Set();
-  graphData.links.forEach(l => {
-    const s = l.source.id || l.source, t = l.target.id || l.target;
+  const data = Graph ? Graph.graphData() : buildGraphData();
+  const ns = new Set([node.id]);
+  const ls = new Set();
+  data.links.forEach(l => {
+    const s = l.source.id || l.source;
+    const t = l.target.id || l.target;
     if (s === node.id) { ns.add(t); ls.add(l); }
     if (t === node.id) { ns.add(s); ls.add(l); }
   });
   return { ns, ls };
 }
 
-function initGraph() {
+function particleCount(link) {
+  if (!linkVisible(link)) return 0;
+  if (highlightLinks.has(link)) return 5;
+  return 1;
+}
+
+function linkColor(link) {
+  if (!linkVisible(link)) return "rgba(0,0,0,0)";
+  if (highlightLinks.has(link)) return "rgba(94,234,212,0.65)";
+  return "rgba(120,135,160,0.22)";
+}
+
+function linkWidth(link) {
+  if (!linkVisible(link)) return 0;
+  return highlightLinks.has(link) ? 2.5 : 1;
+}
+
+function nodeColor(node, dim) {
+  const c = COLORS[node.group] || "#888";
+  if (dim) return c + "44";
+  return c;
+}
+
+function markInteraction() {
+  userInteracting = true;
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(() => { userInteracting = false; }, 4000);
+}
+
+function stopMotion() {
+  if (motionRaf) cancelAnimationFrame(motionRaf);
+  motionRaf = null;
+}
+
+function startIdleMotion() {
+  stopMotion();
+  function tick() {
+    if (!Graph || userInteracting) {
+      motionRaf = requestAnimationFrame(tick);
+      return;
+    }
+    if (is3D) {
+      cameraAngle += 0.0035;
+      const dist = 320;
+      Graph.cameraPosition(
+        { x: dist * Math.sin(cameraAngle), y: 40, z: dist * Math.cos(cameraAngle) },
+        { x: 0, y: 0, z: 0 },
+        0
+      );
+    } else {
+      cameraAngle += 0.0018;
+      Graph.centerAt(Math.cos(cameraAngle) * 18, Math.sin(cameraAngle) * 12, 0);
+    }
+    motionRaf = requestAnimationFrame(tick);
+  }
+  motionRaf = requestAnimationFrame(tick);
+}
+
+function applyClusterForces(g) {
+  const data = g.graphData();
+  const forceX = g.d3Force("x");
+  const forceY = g.d3Force("y");
+  if (!forceX || !forceY) return;
+
+  forceX.strength(n => (GROUP_ANCHORS[n.group] ? 0.06 : 0));
+  forceX.x(n => (GROUP_ANCHORS[n.group] || { x: 0 }).x);
+
+  forceY.strength(n => (GROUP_ANCHORS[n.group] ? 0.06 : 0));
+  forceY.y(n => (GROUP_ANCHORS[n.group] || { y: 0 }).y);
+  g.d3ReheatSimulation();
+}
+
+function runIntroAnimation(g) {
+  const data = g.graphData();
+  data.nodes.forEach(n => {
+    n.x = (Math.random() - 0.5) * 8;
+    n.y = (Math.random() - 0.5) * 8;
+    if (is3D) n.z = (Math.random() - 0.5) * 8;
+  });
+  g.graphData(data);
+  g.d3ReheatSimulation();
+
+  setTimeout(() => {
+    if (is3D) {
+      g.cameraPosition({ x: 0, y: 0, z: 380 }, { x: 0, y: 0, z: 0 }, 1200);
+    } else {
+      g.zoomToFit(1200, 70);
+    }
+    introDone = true;
+    startIdleMotion();
+  }, 1400);
+}
+
+function drawNode2D(node, ctx, scale) {
+  const r = Math.sqrt(node.val) * 1.55;
+  const dim = highlightNodes.size > 0 && !highlightNodes.has(node.id);
+  const color = COLORS[node.group] || "#888";
+  const t = Date.now() / 1000;
+
+  if (highlightNodes.has(node.id)) {
+    ctx.beginPath();
+    ctx.arc(node.x, node.y, r + 7, 0, 2 * Math.PI);
+    ctx.fillStyle = color + "28";
+    ctx.fill();
+  }
+
+  if (node.id === "me") {
+    const pulse = 0.5 + 0.5 * Math.sin(t * 2.2);
+    ctx.beginPath();
+    ctx.arc(node.x, node.y, r + 6 + pulse * 5, 0, 2 * Math.PI);
+    ctx.strokeStyle = `rgba(244,197,66,${0.15 + pulse * 0.2})`;
+    ctx.lineWidth = 2 / scale;
+    ctx.stroke();
+  }
+
+  const grad = ctx.createRadialGradient(node.x - r * 0.3, node.y - r * 0.3, 0, node.x, node.y, r);
+  grad.addColorStop(0, dim ? color + "55" : color);
+  grad.addColorStop(1, dim ? color + "22" : color + "cc");
+  ctx.beginPath();
+  ctx.arc(node.x, node.y, r, 0, 2 * Math.PI);
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  if (node.id === "me") {
+    ctx.lineWidth = 2 / scale;
+    ctx.strokeStyle = "#fff";
+    ctx.stroke();
+  }
+
+  const abbrev = node.group === "skill" ? node.label.slice(0, 2).toUpperCase() : "";
+  if (abbrev && r > 8) {
+    ctx.font = `600 ${Math.max(8 / scale, 2.5)}px Inter, sans-serif`;
+    ctx.fillStyle = dim ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.45)";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(abbrev, node.x, node.y);
+  }
+
+  const fontSize = Math.max(10 / scale, 3);
+  ctx.font = `${node.id === "me" ? 700 : 500} ${fontSize}px Inter, sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+  ctx.fillStyle = dim ? "rgba(230,237,243,0.22)" : "#e6edf3";
+  ctx.fillText(node.label, node.x, node.y + r + 3);
+}
+
+function bindSharedHandlers(g) {
+  g.onNodeHover(node => {
+    highlightNodes.clear();
+    highlightLinks.clear();
+    if (node) {
+      const { ns, ls } = neighbors(node);
+      highlightNodes = ns;
+      highlightLinks = ls;
+      canvasEl.style.cursor = "pointer";
+      hoverNode = node;
+    } else {
+      canvasEl.style.cursor = is3D ? "move" : "grab";
+      hoverNode = null;
+    }
+    g.linkDirectionalParticles(particleCount);
+  });
+
+  g.onNodeClick(node => {
+    markInteraction();
+    showPanel(node);
+    if (is3D) {
+      const dist = 140;
+      g.cameraPosition(
+        { x: node.x + dist * 0.4, y: node.y + dist * 0.3, z: node.z + dist },
+        node,
+        800
+      );
+    } else {
+      g.centerAt(node.x, node.y, 600);
+      g.zoom(2.3, 600);
+    }
+  });
+
+  g.onBackgroundClick(() => {
+    markInteraction();
+    resetPanel();
+  });
+}
+
+function initGraph2D() {
+  is3D = false;
+  canvasEl.classList.remove("mode-3d");
+  canvasEl.innerHTML = "";
+  introDone = false;
+
+  const data = buildGraphData();
   Graph = ForceGraph()(canvasEl)
-    .graphData(graphData)
+    .graphData(data)
     .backgroundColor("rgba(0,0,0,0)")
-    .nodeRelSize(5)
+    .nodeRelSize(4)
     .nodeVal("val")
-    .linkColor(l => highlightLinks.has(l) ? "rgba(94,234,212,0.55)" : "rgba(120,135,160,0.18)")
-    .linkWidth(l => highlightLinks.has(l) ? 2 : 1)
-    .linkDirectionalParticles(l => highlightLinks.has(l) ? 3 : 0)
-    .linkDirectionalParticleWidth(2)
-    .linkDirectionalParticleColor(() => "#5eead4")
-    .nodeCanvasObject((node, ctx, scale) => {
-      const r = Math.sqrt(node.val) * 1.8;
-      const dim = highlightNodes.size > 0 && !highlightNodes.has(node.id);
-      const color = COLORS[node.group] || "#888";
-
-      // glow for hovered/highlighted
-      if (highlightNodes.has(node.id)) {
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, r + 5, 0, 2 * Math.PI);
-        ctx.fillStyle = color + "33";
-        ctx.fill();
-      }
-      ctx.beginPath();
-      ctx.arc(node.x, node.y, r, 0, 2 * Math.PI);
-      ctx.fillStyle = dim ? color + "33" : color;
-      ctx.fill();
-      if (node.id === "me") {
-        ctx.lineWidth = 2 / scale;
-        ctx.strokeStyle = "#fff";
-        ctx.stroke();
-      }
-
-      // label
-      const label = node.label;
-      const fontSize = Math.max(11 / scale, 3.2);
-      ctx.font = `${node.group === "person" ? 700 : 500} ${fontSize}px Inter, sans-serif`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "top";
-      ctx.fillStyle = dim ? "rgba(230,237,243,0.25)" : "#e6edf3";
-      ctx.fillText(label, node.x, node.y + r + 2);
-    })
+    .warmupTicks(80)
+    .cooldownTime(3000)
+    .linkColor(linkColor)
+    .linkWidth(linkWidth)
+    .linkDirectionalParticles(particleCount)
+    .linkDirectionalParticleWidth(l => highlightLinks.has(l) ? 2.5 : 1.2)
+    .linkDirectionalParticleSpeed(l => highlightLinks.has(l) ? 0.008 : 0.003)
+    .linkDirectionalParticleColor(l => highlightLinks.has(l) ? "#5eead4" : "rgba(94,234,212,0.35)")
+    .nodeCanvasObject((node, ctx, scale) => drawNode2D(node, ctx, scale))
+    .nodeCanvasObjectMode(() => "replace")
     .nodePointerAreaPaint((node, color, ctx) => {
-      const r = Math.sqrt(node.val) * 1.8 + 4;
+      const r = Math.sqrt(node.val) * 1.55 + 5;
       ctx.fillStyle = color;
       ctx.beginPath();
       ctx.arc(node.x, node.y, r, 0, 2 * Math.PI);
       ctx.fill();
     })
-    .onNodeHover(node => {
-      highlightNodes.clear(); highlightLinks.clear();
-      if (node) {
-        const { ns, ls } = neighbors(node);
-        highlightNodes = ns; highlightLinks = ls;
-        canvasEl.style.cursor = "pointer";
-      } else {
-        canvasEl.style.cursor = "grab";
-      }
-      hoverNode = node || null;
-    })
-    .onNodeClick(node => {
-      showPanel(node);
-      Graph.centerAt(node.x, node.y, 600);
-      Graph.zoom(2.2, 600);
-    })
-    .onBackgroundClick(() => resetPanel());
+    .onZoom(() => markInteraction())
+    .onNodeDrag(() => markInteraction());
 
-  // forces: a bit more spread
-  Graph.d3Force("charge").strength(-220);
+  bindSharedHandlers(Graph);
+  Graph.d3Force("charge").strength(-280);
   Graph.d3Force("link").distance(l => {
-    const g = (l.source.group || "") + (l.target.group || "");
-    return g.includes("skill") ? 45 : 80;
+    const sg = l.source.group || "";
+    const tg = l.target.group || "";
+    return (sg === "skill" || tg === "skill") ? 50 : 85;
   });
-
+  applyClusterForces(Graph);
   sizeGraph();
-  // gentle initial zoom-to-fit
-  setTimeout(() => Graph.zoomToFit(600, 60), 700);
+  runIntroAnimation(Graph);
+  updateModeButton();
+}
+
+function initGraph3D() {
+  if (!window.ForceGraph3D) {
+    alert("3D library still loading — try again in a moment.");
+    return;
+  }
+  is3D = true;
+  canvasEl.classList.add("mode-3d");
+  canvasEl.innerHTML = "";
+  introDone = false;
+
+  const data = buildGraphData();
+  Graph = ForceGraph3D()(canvasEl)
+    .graphData(data)
+    .backgroundColor("rgba(0,0,0,0)")
+    .showNavInfo(false)
+    .nodeVal("val")
+    .nodeLabel(n => `<span style="color:${COLORS[n.group]}">${n.label}</span>`)
+    .nodeColor(n => {
+      const dim = highlightNodes.size > 0 && !highlightNodes.has(n.id);
+      return nodeColor(n, dim);
+    })
+    .nodeOpacity(0.95)
+    .nodeResolution(16)
+    .linkColor(linkColor)
+    .linkWidth(linkWidth)
+    .linkOpacity(0.55)
+    .linkDirectionalParticles(particleCount)
+    .linkDirectionalParticleWidth(l => highlightLinks.has(l) ? 2.5 : 1)
+    .linkDirectionalParticleSpeed(l => highlightLinks.has(l) ? 0.01 : 0.004)
+    .linkDirectionalParticleColor(l => highlightLinks.has(l) ? "#5eead4" : "rgba(94,234,212,0.4)")
+    .warmupTicks(100)
+    .cooldownTime(3500)
+    .onNodeDrag(() => markInteraction());
+
+  bindSharedHandlers(Graph);
+  Graph.d3Force("charge").strength(-180);
+  Graph.d3Force("link").distance(70);
+  applyClusterForces(Graph);
+  sizeGraph();
+  runIntroAnimation(Graph);
+  updateModeButton();
+}
+
+function destroyGraph() {
+  stopMotion();
+  if (Graph && Graph._destructor) Graph._destructor();
+  Graph = null;
+  canvasEl.innerHTML = "";
+}
+
+function switchGraphMode() {
+  markInteraction();
+  resetPanel();
+  highlightNodes.clear();
+  highlightLinks.clear();
+  if (is3D) {
+    destroyGraph();
+    initGraph2D();
+  } else {
+    destroyGraph();
+    initGraph3D();
+  }
+}
+
+function refreshGraphData() {
+  if (!Graph) return;
+  const data = buildGraphData();
+  Graph.graphData(data);
+  applyClusterForces(Graph);
+  highlightNodes.clear();
+  highlightLinks.clear();
+  Graph.linkDirectionalParticles(particleCount);
+}
+
+function updateModeButton() {
+  const key = is3D ? "graph_3d" : "graph_2d";
+  modeBtn.textContent = I18N[key][currentLang === "ko" ? 1 : 0];
+  modeBtn.dataset.mode = is3D ? "3d" : "2d";
 }
 
 function sizeGraph() {
@@ -171,7 +442,31 @@ function sizeGraph() {
 }
 window.addEventListener("resize", sizeGraph);
 
-/* ---------- 3. Detail panel ---------- */
+canvasEl.addEventListener("mousedown", markInteraction);
+canvasEl.addEventListener("wheel", markInteraction, { passive: true });
+
+/* ---------- 3. Legend filters ---------- */
+document.querySelectorAll(".legend-item").forEach(item => {
+  const toggle = () => {
+    const group = item.dataset.group;
+    if (activeGroups.has(group)) {
+      if (activeGroups.size === 1) return;
+      activeGroups.delete(group);
+      item.classList.remove("active");
+    } else {
+      activeGroups.add(group);
+      item.classList.add("active");
+    }
+    markInteraction();
+    refreshGraphData();
+  };
+  item.addEventListener("click", toggle);
+  item.addEventListener("keydown", e => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); }
+  });
+});
+
+/* ---------- 4. Detail panel ---------- */
 const panelDefault = document.querySelector(".panel-default");
 const panelDetail = document.querySelector(".panel-detail");
 const GROUP_LABELS = {
@@ -191,21 +486,33 @@ function showPanel(node) {
   document.getElementById("panel-title").textContent = node.label;
   document.getElementById("panel-desc").textContent =
     currentLang === "ko" && node.desc_ko ? node.desc_ko : node.desc;
+  const meta = [...(node.meta || []), `${DEGREE[node.id]} connections`];
   document.getElementById("panel-meta").innerHTML =
-    (node.meta || []).map(m => `<span>${m}</span>`).join("");
+    meta.map(m => `<span>${m}</span>`).join("");
   document.getElementById("panel-links").innerHTML =
     node.link ? `<a href="${node.link}" target="_blank" rel="noopener">↗ ${node.link.replace("https://","")}</a>` : "";
 }
+
 function resetPanel() {
   panelDetail.hidden = true;
   panelDefault.hidden = false;
 }
+
 document.getElementById("graph-reset").addEventListener("click", () => {
+  markInteraction();
   resetPanel();
-  Graph.zoomToFit(600, 60);
+  highlightNodes.clear();
+  highlightLinks.clear();
+  if (is3D) {
+    Graph.cameraPosition({ x: 0, y: 0, z: 380 }, { x: 0, y: 0, z: 0 }, 800);
+  } else {
+    Graph.zoomToFit(600, 70);
+  }
 });
 
-/* ---------- 4. i18n (EN / KR) ---------- */
+modeBtn.addEventListener("click", switchGraphMode);
+
+/* ---------- 5. i18n ---------- */
 const I18N = {
   nav_graph: ["Graph", "그래프"],
   nav_experience: ["Experience", "경력"],
@@ -224,16 +531,19 @@ const I18N = {
   hero_contact: ["Get in touch", "연락하기"],
   graph_title: ["Knowledge Graph", "지식 그래프"],
   graph_sub: [
-    "My career as a graph — the way I build my systems. Drag nodes, hover to trace connections, and click any node to dive in. Companies, projects, and the skills that connect them.",
-    "그래프로 표현한 제 커리어 — 제가 시스템을 만드는 방식 그대로. 노드를 드래그하고, 호버해 연결을 추적하고, 노드를 클릭해 자세히 살펴보세요. 회사, 프로젝트, 그리고 이를 잇는 기술들."
+    "My career as a graph — the way I build my systems. Drag nodes, hover to trace connections, click to filter by type, and toggle 3D for the full view.",
+    "그래프로 표현한 제 커리어 — 제가 시스템을 만드는 방식 그대로. 노드를 드래그하고, 호버해 연결을 추적하고, 범례로 유형을 필터링하고, 3D로 전환해 전체를 보세요."
   ],
   panel_hint: ["◍ Click a node to inspect", "◍ 노드를 클릭해 살펴보세요"],
+  legend_filter: ["Filter by type — click to toggle", "유형별 필터 — 클릭하여 전환"],
   legend_me: ["Me", "나"],
   legend_org: ["Organizations", "소속"],
   legend_project: ["Projects", "프로젝트"],
   legend_skill: ["Skills & Tech", "기술"],
   graph_reset: ["⟳ Reset view", "⟳ 보기 초기화"],
-  graph_tip: ["Tip: scroll to zoom, drag background to pan", "팁: 스크롤로 확대/축소, 배경 드래그로 이동"],
+  graph_2d: ["Switch to 3D", "3D로 전환"],
+  graph_3d: ["Switch to 2D", "2D로 전환"],
+  graph_tip: ["Tip: scroll to zoom · drag to pan · click legend to filter", "팁: 스크롤 확대/축소 · 드래그 이동 · 범례 클릭 필터"],
   exp_title: ["Experience", "경력"],
   exp_role: ["Financial Data Analyst", "재무 데이터 분석가"],
   exp_b1: [
@@ -283,22 +593,22 @@ function applyLang(lang) {
     const key = el.getAttribute("data-i18n");
     if (I18N[key]) el.textContent = I18N[key][lang === "ko" ? 1 : 0];
   });
-  // toggle button visual
   document.querySelector(".lang-en").classList.toggle("active", lang === "en");
   document.querySelector(".lang-ko").classList.toggle("active", lang === "ko");
-  // refresh open panel
+  updateModeButton();
   if (!panelDetail.hidden && hoverNode) showPanel(hoverNode);
 }
 document.getElementById("lang-toggle").addEventListener("click", () => {
   applyLang(currentLang === "en" ? "ko" : "en");
 });
 
-/* ---------- 5. Animated stat counters ---------- */
+/* ---------- 6. Animated stat counters ---------- */
 function animateCounters() {
   document.querySelectorAll(".stat-num").forEach(el => {
     const target = +el.dataset.count;
     const suffix = el.dataset.suffix || "";
-    const dur = 1400; const start = performance.now();
+    const dur = 1400;
+    const start = performance.now();
     const fmt = n => {
       if (target >= 1_000_000) return (n / 1_000_000).toFixed(2).replace(/\.00$/, "") + "M";
       if (target >= 1000) return Math.round(n / 1000) + "K";
@@ -314,9 +624,9 @@ function animateCounters() {
   });
 }
 
-/* ---------- 6. Boot ---------- */
+/* ---------- 7. Boot ---------- */
 document.getElementById("year").textContent = new Date().getFullYear();
 window.addEventListener("load", () => {
-  if (window.ForceGraph) initGraph();
+  if (window.ForceGraph) initGraph2D();
   animateCounters();
 });

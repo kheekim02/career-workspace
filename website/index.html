@@ -54,7 +54,7 @@
       <h2><span class="section-num">01</span> <span data-i18n="graph_title">Knowledge Graph</span></h2>
       <p class="section-sub" data-i18n="graph_sub">
         My career as a graph — the way I build my systems. Drag nodes, hover to trace connections,
-        and click any node to dive in. Companies, projects, and the skills that connect them.
+        click legend to filter by type, and toggle 3D for the full view.
       </p>
     </div>
 
@@ -64,11 +64,20 @@
       <aside id="graph-panel" class="graph-panel">
         <div class="panel-default">
           <p class="panel-hint" data-i18n="panel_hint">◍ Click a node to inspect</p>
-          <ul class="legend">
-            <li><span class="dot dot-person"></span><span data-i18n="legend_me">Me</span></li>
-            <li><span class="dot dot-org"></span><span data-i18n="legend_org">Organizations</span></li>
-            <li><span class="dot dot-project"></span><span data-i18n="legend_project">Projects</span></li>
-            <li><span class="dot dot-skill"></span><span data-i18n="legend_skill">Skills &amp; Tech</span></li>
+          <p class="legend-label" data-i18n="legend_filter">Filter by type — click to toggle</p>
+          <ul class="legend" id="graph-legend">
+            <li class="legend-item active" data-group="person" role="button" tabindex="0">
+              <span class="dot dot-person"></span><span data-i18n="legend_me">Me</span>
+            </li>
+            <li class="legend-item active" data-group="org" role="button" tabindex="0">
+              <span class="dot dot-org"></span><span data-i18n="legend_org">Organizations</span>
+            </li>
+            <li class="legend-item active" data-group="project" role="button" tabindex="0">
+              <span class="dot dot-project"></span><span data-i18n="legend_project">Projects</span>
+            </li>
+            <li class="legend-item active" data-group="skill" role="button" tabindex="0">
+              <span class="dot dot-skill"></span><span data-i18n="legend_skill">Skills &amp; Tech</span>
+            </li>
           </ul>
         </div>
         <div class="panel-detail" hidden>
@@ -82,7 +91,8 @@
     </div>
     <div class="graph-controls">
       <button id="graph-reset" class="chip" data-i18n="graph_reset">⟳ Reset view</button>
-      <span class="graph-tip" data-i18n="graph_tip">Tip: scroll to zoom, drag background to pan</span>
+      <button id="graph-mode" class="chip chip-accent" data-i18n="graph_2d">2D view</button>
+      <span class="graph-tip" data-i18n="graph_tip">Tip: scroll to zoom · drag to pan · click legend to filter</span>
     </div>
   </section>
 
@@ -212,6 +222,7 @@
   </section>
 
   <script src="https://unpkg.com/force-graph@1.43.5/dist/force-graph.min.js"></script>
+  <script src="https://unpkg.com/3d-force-graph@1.73.3/dist/3d-force-graph.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
