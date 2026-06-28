@@ -1,56 +1,47 @@
 # Kunhee (Geoffrey) Kim
-**Data Engineer · Data Analyst**
 
 kunheekim02@gmail.com | Berkeley / Bay Area, CA | linkedin.com/in/kk02 | github.com/kheekim02
 
 ## Summary
 
-Data Engineer and UC Berkeley Data Science graduate who designs and scales production ETL/ELT
-pipelines, multi-terabyte data lakes and warehouses (PostgreSQL, Neo4j, Apache Spark), and ML/NLP
-systems. Scaled a research data lake to 2M+ filings and 33M+ records with strict data-integrity
-guarantees, relational data modeling, and SQL performance tuning. Bilingual in English and Korean.
-
-## Experience
-
-### Financial Data Analyst — Global Key Advisors, Bay Area, CA
-*January 2026 – Present*
-
-- Re-architected SEC EDGAR extract-transform-load (ETL) scraping pipelines (8-K, 10-K, 10-Q, Form 15/25) from a memory-constrained CSV approach to a threaded PostgreSQL integration, scaling the data lake to 2.05M+ text filings and 3.3M+ financial records across 28,000+ entities.
-- Administered a PostgreSQL research warehouse (sec_data) holding 33M+ records and 42 GB of text; architected modular schemas, tuned TOAST storage, and debugged the query planner via system catalogs and ANALYZE statistics.
-- Automated daily ingestion of a 1.12 GB price panel from a remote Windows host to a Linux Spark cluster, eliminating IP-ban risk and saving hours/week; built data-integrity logic (CIK joins, point-in-time mapping, vendor dedup, idempotent upserts) to prevent silent corruption.
-- Built NLP extraction with local LLMs (Ollama) parsing filings into corporate-relationship edges in a Neo4j knowledge graph via an async pipeline processing ~480 filings/hour unattended.
-- Migrated prediction strategy from FinBERT sentiment to Graph Neural Networks (GNN); out-of-sample backtesting exposed lookahead bias (a perceived +2.39% return collapsed to negative under 30-bps costs), preventing a losing strategy deployment.
-
-## Projects
-
-### Alpha Signals — Quantitative SEC Event Research Pipeline | Jan 2026 – Present
-*Python, Polars, PostgreSQL, Neo4j, Ollama, Graph Neural Networks*
-
-- Flagship pipeline testing whether corporate events in SEC filings predict stock returns; built an autonomous daily loop (signal generation to simulated trades to GNN predictions by 04:30 PDT) over a Neo4j knowledge graph spanning 28,000+ entities.
-
-### PathWise — Intelligent iOS Running App | Jan 2026 – May 2026
-*Swift (SwiftUI, MapKit, ActivityKit), FastAPI, PostgreSQL + PostGIS, GraphHopper, Docker*
-
-- Full-stack architect: built a pathfinding orchestrator integrating GraphHopper with PostGIS for real-time geofenced routing and a native iOS client with turn-by-turn voice navigation; achieved sub-2-second route generation. Presented at Berkeley's startup pitch competition.
+UC Berkeley Data Science graduate and data engineer who builds and scales production data pipelines,
+multi-terabyte data lakes and warehouses (PostgreSQL, Neo4j, Spark), and ML/NLP systems. Strong in
+robust ETL with strict data-integrity guarantees, SQL performance tuning, and Linux infrastructure.
+Bilingual in English and Korean.
 
 ## Technical Skills
 
-- **Programming Languages:** Python, SQL, Swift, Bash/Shell
-- **Data Engineering:** ETL/ELT pipeline design, data lake & warehouse architecture, relational data modeling, schema design, idempotent ingestion, data quality & validation, deduplication, web scraping
-- **Databases & Big Data:** PostgreSQL (performance tuning, query optimization), Neo4j, Apache Spark (PySpark), PostGIS, SQLite
-- **Python & Backend:** Pandas, Polars, FastAPI, SQLAlchemy, Pydantic, concurrent.futures, BeautifulSoup, REST APIs
-- **ML / NLP:** Local LLM inference (Ollama), Graph Neural Networks (GNN), entity resolution, backtesting, event studies
-- **Tools & Workflow:** Docker, Linux, Git, cron/systemd orchestration, pg_dump/pg_restore, Tableau
-- **Languages (Spoken):** English (fluent), Korean (fluent)
+- **Languages & Data:** Python, SQL, Swift, Bash; PostgreSQL, Neo4j, Apache Spark, PostGIS, SQLite
+- **Data Engineering:** ETL/ELT pipeline design, data lake & warehouse architecture, schema design, idempotent ingestion, deduplication, performance tuning, web scraping
+- **Python & ML/NLP:** Pandas, Polars, FastAPI, SQLAlchemy, Pydantic; local LLM inference (Ollama), Graph Neural Networks, entity resolution, backtesting
+- **Tools & Languages:** Docker, Linux, cron/systemd, Git, Tableau; English (fluent), Korean (fluent)
+
+## Experience
+
+### Global Key Advisors — Financial Data Analyst
+*Jan 2026 – Present · Bay Area, CA*
+
+- Re-architected SEC EDGAR scraping pipelines from a memory-constrained CSV approach to a threaded PostgreSQL integration, scaling the data lake to 2.05M+ text filings and 3.3M+ financial records across 28,000+ entities.
+- Administered a PostgreSQL research warehouse holding 33M+ records and 42 GB of text payloads; architected modular schemas, tuned TOAST storage, and debugged the query planner via system catalogs and ANALYZE statistics.
+- Automated daily ingestion of a 1.12 GB price panel to a Linux Spark cluster with CIK-aligned joins, vendor deduplication, and idempotent upserts, eliminating IP-ban risk and saving hours of manual alignment weekly.
+- Built NLP extraction with local LLMs (Ollama) parsing filings into corporate-relationship edges in a Neo4j knowledge graph via an async pipeline processing ~480 filings/hour unattended.
+- Migrated the prediction strategy from FinBERT sentiment to Graph Neural Networks; out-of-sample backtesting exposed lookahead bias (a +2.39% return collapsed to negative under 30-bps costs), preventing a losing strategy deployment.
+
+## Projects
+
+### Alpha Signals — Quantitative SEC Event Research Pipeline (Global Key Advisors)
+*Python, Polars, PostgreSQL, Neo4j, Ollama, Graph Neural Networks*
+
+- Built an autonomous daily pipeline (signals → simulated trades → GNN predictions by 04:30 PDT) evaluating whether SEC-filing corporate events predict stock returns over a Neo4j knowledge graph.
+
+### PathWise — Intelligent iOS Running App (Spring 2026)
+*Swift (SwiftUI, MapKit, ActivityKit), FastAPI, PostgreSQL + PostGIS, GraphHopper, Docker*
+
+- Full-stack architect of a routing app with a GraphHopper + PostGIS orchestrator and native turn-by-turn navigation; achieved sub-2-second route generation and 100% uptime via a database-agnostic fallback. Presented at Berkeley's startup pitch competition.
 
 ## Education
 
-**University of California, Berkeley** — B.A. Data Science | May 2026
-GPA 3.81 · Completed in 3 years · 2-year military service in Korea (2022–2024)
-Certificates: Berkeley Changemaker; Entrepreneurship & Technology (Sutardja Center / SCET, UC Berkeley)
+**University of California, Berkeley — B.A. Data Science** | May 2026
+GPA 3.81 · Completed in 3 years · Berkeley Changemaker & Entrepreneurship & Technology (SCET) Certificates · 2-yr military service, Korea (2022–24)
 
-## Research & Leadership
-
-- **Student Researcher, UC Berkeley** (Prof. Jill Berrick, FamiliesNotFees) — Applied statistical modeling and ML to national child-welfare data; built Tableau dashboards and the project website, growing reach to 4,000+ views / 1,000+ unique visitors.
-- **Course Coordinator, ENGIN 270B** (2025) — Ran operations for a graduate course of 100+ students; built automated Excel tracking surfacing data-driven metrics for curriculum improvement.
-- **Berkeley Data Discovery** — Meta-analysis of national transfer metrics using ML on large-scale education datasets, with interactive dashboards for strategic decision-making.
+**Other experience:** Student Researcher (Prof. Berrick, *FamiliesNotFees*) — ML on child-welfare data, Tableau dashboards, site grew to 4,000+ views; Course Coordinator, ENGIN 270B (100+ students); Berkeley Data Discovery — ML meta-analysis of education metrics.
