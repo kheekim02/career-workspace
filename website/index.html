@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kunhee (Geoffrey) Kim — Data Engineer</title>
+  <meta name="description" content="Kunhee (Geoffrey) Kim — Data engineer building production pipelines, data lakes, warehouses, and ML/NLP systems. UC Berkeley Data Science.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- ===== NAV ===== -->
+  <nav class="nav">
+    <a href="#top" class="nav-brand"><span class="prompt">~/</span>geoffrey</a>
+    <div class="nav-links">
+      <a href="#graph" data-i18n="nav_graph">Graph</a>
+      <a href="#experience" data-i18n="nav_experience">Experience</a>
+      <a href="#projects" data-i18n="nav_projects">Projects</a>
+      <a href="#about" data-i18n="nav_about">About</a>
+      <a href="#contact" data-i18n="nav_contact">Contact</a>
+    </div>
+    <button id="lang-toggle" class="lang-toggle" aria-label="Toggle language">
+      <span class="lang-en active">EN</span><span class="lang-divider">/</span><span class="lang-ko">한</span>
+    </button>
+  </nav>
+
+  <!-- ===== HERO ===== -->
+  <header id="top" class="hero">
+    <div class="hero-inner">
+      <p class="hero-eyebrow"><span class="blink">▌</span> <span data-i18n="hero_eyebrow">data engineer · uc berkeley data science</span></p>
+      <h1 class="hero-name">Kunhee <span class="accent">(Geoffrey)</span> Kim</h1>
+      <p class="hero-tagline" data-i18n="hero_tagline">
+        I build and scale production data pipelines, multi-terabyte data lakes and warehouses,
+        and ML/NLP systems — from SEC filing graphs to real-time routing engines.
+      </p>
+      <div class="hero-stats">
+        <div class="stat"><span class="stat-num" data-count="2050000" data-suffix="+">0</span><span class="stat-label" data-i18n="stat_filings">filings ingested</span></div>
+        <div class="stat"><span class="stat-num" data-count="33" data-suffix="M+">0</span><span class="stat-label" data-i18n="stat_records">records managed</span></div>
+        <div class="stat"><span class="stat-num" data-count="28000" data-suffix="+">0</span><span class="stat-label" data-i18n="stat_entities">entities tracked</span></div>
+      </div>
+      <div class="hero-cta">
+        <a class="btn btn-primary" href="#graph" data-i18n="hero_explore">Explore my work ↓</a>
+        <a class="btn btn-ghost" href="mailto:kunheekim02@gmail.com" data-i18n="hero_contact">Get in touch</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== KNOWLEDGE GRAPH ===== -->
+  <section id="graph" class="graph-section">
+    <div class="section-head">
+      <h2><span class="section-num">01</span> <span data-i18n="graph_title">Knowledge Graph</span></h2>
+      <p class="section-sub" data-i18n="graph_sub">
+        My career as a graph — the way I build my systems. Drag nodes, hover to trace connections,
+        and click any node to dive in. Companies, projects, and the skills that connect them.
+      </p>
+    </div>
+
+    <div class="graph-wrap">
+      <div id="graph-canvas"></div>
+
+      <aside id="graph-panel" class="graph-panel">
+        <div class="panel-default">
+          <p class="panel-hint" data-i18n="panel_hint">◍ Click a node to inspect</p>
+          <ul class="legend">
+            <li><span class="dot dot-person"></span><span data-i18n="legend_me">Me</span></li>
+            <li><span class="dot dot-org"></span><span data-i18n="legend_org">Organizations</span></li>
+            <li><span class="dot dot-project"></span><span data-i18n="legend_project">Projects</span></li>
+            <li><span class="dot dot-skill"></span><span data-i18n="legend_skill">Skills &amp; Tech</span></li>
+          </ul>
+        </div>
+        <div class="panel-detail" hidden>
+          <span class="panel-tag" id="panel-tag"></span>
+          <h3 id="panel-title"></h3>
+          <p id="panel-desc"></p>
+          <div id="panel-meta" class="panel-meta"></div>
+          <div id="panel-links" class="panel-links"></div>
+        </div>
+      </aside>
+    </div>
+    <div class="graph-controls">
+      <button id="graph-reset" class="chip" data-i18n="graph_reset">⟳ Reset view</button>
+      <span class="graph-tip" data-i18n="graph_tip">Tip: scroll to zoom, drag background to pan</span>
+    </div>
+  </section>
+
+  <!-- ===== EXPERIENCE ===== -->
+  <section id="experience" class="section">
+    <div class="section-head">
+      <h2><span class="section-num">02</span> <span data-i18n="exp_title">Experience</span></h2>
+    </div>
+    <div class="timeline">
+      <article class="card">
+        <div class="card-head">
+          <h3>Global Key Advisors <span class="muted">— <span data-i18n="exp_role">Financial Data Analyst</span></span></h3>
+          <span class="card-date">Jan 2026 – Present</span>
+        </div>
+        <ul class="card-list">
+          <li data-i18n="exp_b1">Saved the firm from deploying a losing trading strategy by exposing lookahead bias in a legacy sentiment model through rigorous out-of-sample backtesting.</li>
+          <li data-i18n="exp_b2">Replaced a fragile CSV-based SEC scraper with a resilient threaded PostgreSQL pipeline spanning 28,000+ entities, with no data loss on restarts.</li>
+          <li data-i18n="exp_b3">Designed a modular PostgreSQL warehouse schema and tuned storage so analysts run complex cross-filing queries without bottlenecks.</li>
+          <li data-i18n="exp_b4">Engineered an unattended NLP pipeline converting raw filing text into a Neo4j corporate-relationship knowledge graph.</li>
+        </ul>
+      </article>
+    </div>
+  </section>
+
+  <!-- ===== PROJECTS / DATA ARCHITECTURE ===== -->
+  <section id="projects" class="section">
+    <div class="section-head">
+      <h2><span class="section-num">03</span> <span data-i18n="proj_title">Data Architecture Projects</span></h2>
+      <p class="section-sub" data-i18n="proj_sub">The pipelines, not just the products. Each project shown as the system it really is.</p>
+    </div>
+
+    <article class="project">
+      <div class="project-info">
+        <h3>Alpha Signals</h3>
+        <p class="project-blurb" data-i18n="proj_alpha">
+          A quantitative research pipeline testing whether corporate events in SEC filings predict
+          stock returns — evolving from text sentiment to a Graph Neural Network over a Neo4j
+          knowledge graph, with a fully autonomous daily orchestration loop.
+        </p>
+        <div class="tags">
+          <span>Python</span><span>Polars</span><span>PostgreSQL</span><span>Neo4j</span><span>Ollama</span><span>GNN</span>
+        </div>
+      </div>
+      <div class="pipeline" aria-label="Alpha Signals data pipeline">
+        <div class="pipe-node">SEC EDGAR</div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-node">Threaded Scraper</div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-node">PostgreSQL<br><small>warehouse</small></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-node">NLP / LLM<br><small>Ollama</small></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-node">Neo4j<br><small>graph</small></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-node accent-node">GNN<br><small>signals</small></div>
+      </div>
+    </article>
+
+    <article class="project">
+      <div class="project-info">
+        <h3>PathWise</h3>
+        <p class="project-blurb" data-i18n="proj_pathwise">
+          An intelligent iOS running app that generates elevation-controlled, geofenced routing
+          loops with native turn-by-turn navigation — sub-2-second route generation via parallelized
+          spatial queries and a resilient, database-agnostic fallback.
+        </p>
+        <div class="tags">
+          <span>Swift</span><span>SwiftUI</span><span>FastAPI</span><span>PostGIS</span><span>GraphHopper</span><span>Docker</span>
+        </div>
+      </div>
+      <div class="pipeline" aria-label="PathWise data pipeline">
+        <div class="pipe-node">iOS Client<br><small>SwiftUI</small></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-node">FastAPI</div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-node">PostGIS<br><small>+ GraphHopper</small></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-node accent-node">Routes<br><small>&lt;2s</small></div>
+      </div>
+    </article>
+  </section>
+
+  <!-- ===== ABOUT / EDUCATION / BILINGUAL ===== -->
+  <section id="about" class="section">
+    <div class="section-head">
+      <h2><span class="section-num">04</span> <span data-i18n="about_title">About</span></h2>
+    </div>
+    <div class="about-grid">
+      <div class="about-block">
+        <h3 data-i18n="about_edu">Education</h3>
+        <p><strong>University of California, Berkeley</strong><br>
+        <span data-i18n="about_degree">B.A. Data Science · May 2026</span></p>
+        <p class="muted" data-i18n="about_edu_detail">GPA 3.81 · Completed in 3 years · Berkeley Changemaker &amp; Entrepreneurship &amp; Technology (SCET) Certificates</p>
+      </div>
+      <div class="about-block">
+        <h3 data-i18n="about_lang">Bilingual</h3>
+        <div class="lang-bars">
+          <div class="lang-bar">
+            <div class="lang-bar-head"><span>English</span><span class="muted" data-i18n="lang_fluent">Fluent</span></div>
+            <div class="bar"><i style="width:100%"></i></div>
+          </div>
+          <div class="lang-bar">
+            <div class="lang-bar-head"><span>한국어 (Korean)</span><span class="muted" data-i18n="lang_native">Native</span></div>
+            <div class="bar"><i style="width:100%"></i></div>
+          </div>
+        </div>
+        <p class="muted" data-i18n="about_lang_detail">2 years lived in Korea during military service (2022–2024). Comfortable working and presenting in both languages.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== CONTACT ===== -->
+  <section id="contact" class="section contact">
+    <div class="section-head">
+      <h2><span class="section-num">05</span> <span data-i18n="contact_title">Get in touch</span></h2>
+    </div>
+    <p class="contact-line" data-i18n="contact_sub">Open to data engineering &amp; analytics roles. Let's talk.</p>
+    <div class="contact-links">
+      <a class="btn btn-primary" href="mailto:kunheekim02@gmail.com">kunheekim02@gmail.com</a>
+      <a class="btn btn-ghost" href="https://www.linkedin.com/in/kk02/" target="_blank" rel="noopener">LinkedIn</a>
+      <a class="btn btn-ghost" href="https://github.com/kheekim02" target="_blank" rel="noopener">GitHub</a>
+    </div>
+    <footer class="footer">
+      <span>© <span id="year"></span> Kunhee (Geoffrey) Kim</span>
+      <span class="muted" data-i18n="footer_built">Built with vanilla JS + force-graph · hosted on Cloudflare Pages</span>
+    </footer>
+  </section>
+
+  <script src="https://unpkg.com/force-graph@1.43.5/dist/force-graph.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
