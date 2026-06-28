@@ -268,17 +268,54 @@ function initGraph() {
   applyClusterForces(Graph);
 
   sizeGraph();
-  setTimeout(() => Graph.zoomToFit(800, 70), 700);
-  setTimeout(startIdleMotion, 2000);
+  // Re-fit several times to survive late layout/font shifts that can leave
+  // the canvas mis-sized (and nodes off-screen) on first paint.
+  [150, 500, 1000, 1800].forEach(t =>
+    setTimeout(() => { sizeGraph(); if (Graph) Graph.zoomToFit(500, 70); }, t)
+  );
+  setTimeout(startIdleMotion, 2200);
+  updateDebug();
 }
 
 function sizeGraph() {
   if (!Graph) return;
-  Graph.width(canvasEl.clientWidth).height(canvasEl.clientHeight);
+  const w = canvasEl.clientWidth || canvasEl.offsetWidth || 800;
+  const h = canvasEl.clientHeight || canvasEl.offsetHeight || 600;
+  Graph.width(w).height(h);
+  updateDebug();
 }
 window.addEventListener("resize", sizeGraph);
+if (typeof ResizeObserver !== "undefined") {
+  new ResizeObserver(() => sizeGraph()).observe(canvasEl);
+}
 canvasEl.addEventListener("mousedown", markInteraction);
 canvasEl.addEventListener("wheel", markInteraction, { passive: true });
+
+/* ---------- 7b. Visible diagnostic (add ?debug=1 to URL) ---------- */
+function updateDebug() {
+  if (!/[?&]debug=1/.test(location.search)) return;
+  let box = document.getElementById("graph-debug");
+  if (!box) {
+    box = document.createElement("div");
+    box.id = "graph-debug";
+    box.style.cssText =
+      "position:absolute;top:8px;left:8px;z-index:50;font:11px/1.5 monospace;" +
+      "background:rgba(0,0,0,0.8);color:#5eead4;padding:8px 10px;border-radius:8px;" +
+      "max-width:90%;white-space:pre;pointer-events:none;border:1px solid #5eead4";
+    canvasEl.style.position = "relative";
+    canvasEl.appendChild(box);
+  }
+  let n0 = null;
+  try { const d = Graph && Graph.graphData(); n0 = d && d.nodes[0]; } catch (e) {}
+  box.textContent = [
+    "ForceGraph: " + (typeof window.ForceGraph),
+    "canvas client: " + canvasEl.clientWidth + " x " + canvasEl.clientHeight,
+    "DPR: " + window.devicePixelRatio,
+    "nodes: " + (Graph ? Graph.graphData().nodes.length : "n/a"),
+    "node0: " + (n0 ? (n0.id + " (" + Math.round(n0.x) + "," + Math.round(n0.y) + ")") : "n/a"),
+    "zoom: " + (Graph && Graph.zoom ? Graph.zoom().toFixed(2) : "n/a"),
+  ].join("\n");
+}
 
 /* ---------- 8. Legend filters (visibility-based) ---------- */
 function refreshVisibility() {
