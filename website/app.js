@@ -231,6 +231,8 @@ function nodeRadius(node) {
 
 /* ---- Rec 6: label pill ---- */
 function drawLabelPill(node, ctx, scale, r, vs) {
+  if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return;
+  scale = safeScale(scale);
   const fontSize = Math.max(10 / scale, 3.5);
   const fontWeight = node.id === "me" ? 700 : 500;
   ctx.font = `${fontWeight} ${fontSize}px Inter, Arial, sans-serif`;
@@ -282,17 +284,28 @@ function nodeColor(node) {
   return `rgba(${r},${g},${b},${vs.opacity})`;
 }
 
+function safeScale(scale) {
+  return Number.isFinite(scale) && scale > 0 ? scale : 1;
+}
+
 /* ---- Rec 1+2+3+5+6: decoration drawn in "after" mode over the base circle ---- */
 function drawNodeDecor(node, ctx, scale) {
-  if (!useFullRenderer) {            // safe mode: just the label
+  scale = safeScale(scale);
+  if (!useFullRenderer) {
     const vsl = getNodeVisualState(node);
     if (vsl.showLabel) drawLabelPill(node, ctx, scale, nodeRadius(node), vsl);
     return;
   }
+  // Simulation may not have assigned x/y yet — drawing with NaN crashes
+  // createRadialGradient and kills the entire render loop (black screen).
+  if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return;
+
   const vs = getNodeVisualState(node);
   const pulseMul = vs.pulse ? 1 + Math.sin(effectsTime * 2.1) * 0.06 : 1;
-  const R = nodeRadius(node) * pulseMul;
-  const { x, y } = node;
+  const R = Math.max(nodeRadius(node) * pulseMul, 2);
+  if (!Number.isFinite(R)) return;
+  const x = node.x;
+  const y = node.y;
   const [cr, cg, cb] = hexRgb(vs.color);
 
   ctx.save();
@@ -311,7 +324,7 @@ function drawNodeDecor(node, ctx, scale) {
 
   // Rec 1 — glossy sphere overlay (covers the flat built-in circle exactly)
   const grad = ctx.createRadialGradient(
-    x - R * 0.32, y - R * 0.32, R * 0.08,
+    x - R * 0.32, y - R * 0.32, Math.max(R * 0.08, 0.5),
     x, y, R
   );
   grad.addColorStop(0, lightenHex(vs.color, 60));
@@ -360,9 +373,11 @@ function drawNodeDecor(node, ctx, scale) {
 function linkColorTransparent() { return "rgba(0,0,0,0)"; }
 
 function drawLinkDecor(link, ctx, scale) {
+  scale = safeScale(scale);
   if (!isLinkVisible(link)) return;
   const s = link.source, t = link.target;
-  if (s.x == null || t.x == null) return;
+  if (!Number.isFinite(s.x) || !Number.isFinite(s.y) ||
+      !Number.isFinite(t.x) || !Number.isFinite(t.y)) return;
   const highlighted = highlightLinks.has(link);
   const cinematic = highlightNodes.size > 0 || focusNode != null;
 
