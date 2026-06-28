@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kunhee (Geoffrey) Kim — Resume</title>
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --muted: #555;
+    --accent: #1f3a5f;
+    --rule: #c9d2dc;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: "Calibri", "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    font-size: 10.5pt;
+    line-height: 1.34;
+    background: #f4f5f7;
+  }
+  .page {
+    max-width: 8.5in;
+    margin: 0.4in auto;
+    padding: 0.55in 0.6in;
+    background: #fff;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+  }
+  header { text-align: center; margin-bottom: 6px; }
+  h1 {
+    font-size: 22pt;
+    margin: 0;
+    letter-spacing: 0.5px;
+    color: var(--accent);
+  }
+  .contact {
+    margin-top: 4px;
+    font-size: 9.5pt;
+    color: var(--muted);
+  }
+  .contact a { color: var(--muted); text-decoration: none; }
+  .contact span { white-space: nowrap; }
+  .sep { margin: 0 6px; color: var(--rule); }
+  h2 {
+    font-size: 11pt;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--accent);
+    border-bottom: 1.5px solid var(--accent);
+    padding-bottom: 2px;
+    margin: 14px 0 7px;
+  }
+  .summary { margin: 0; text-align: justify; }
+  .entry { margin-bottom: 9px; }
+  .entry-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+  }
+  .entry-title { font-weight: 700; }
+  .entry-title .role { font-weight: 600; color: var(--accent); }
+  .entry-meta { color: var(--muted); font-size: 9.5pt; white-space: nowrap; font-style: italic; }
+  .entry-sub { font-style: italic; color: var(--muted); font-size: 9.7pt; margin: 1px 0 3px; }
+  ul { margin: 3px 0 0; padding-left: 17px; }
+  li { margin-bottom: 2.5px; }
+  .group-label { font-weight: 700; font-size: 9.7pt; margin-top: 5px; }
+  .skills p { margin: 2px 0; }
+  .skills .k { font-weight: 700; color: var(--accent); }
+  .tech { font-style: italic; color: var(--muted); font-size: 9.5pt; margin: 1px 0 2px; }
+  .edu-line { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  .certs { margin: 4px 0 0; padding-left: 17px; }
+  @media print {
+    body { background: #fff; font-size: 10pt; }
+    .page { margin: 0; box-shadow: none; max-width: none; width: 100%; padding: 0.45in 0.55in; }
+    h2 { margin-top: 11px; }
+    a { color: var(--ink); }
+  }
+  @page { size: Letter; margin: 0.4in; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <h1>Kunhee (Geoffrey) Kim</h1>
+    <div class="contact">
+      <span><a href="mailto:kunheekim02@gmail.com">kunheekim02@gmail.com</a></span>
+      <span class="sep">|</span>
+      <span>Berkeley / Bay Area, CA</span>
+      <span class="sep">|</span>
+      <span><a href="https://www.linkedin.com/in/kk02/">linkedin.com/in/kk02</a></span>
+      <span class="sep">|</span>
+      <span><a href="https://github.com/kheekim02">github.com/kheekim02</a></span>
+    </div>
+  </header>
+
+  <section>
+    <h2>Summary</h2>
+    <p class="summary">
+      Data engineer and UC Berkeley Data Science graduate specializing in building and scaling
+      production data pipelines, multi-terabyte data lakes and warehouses (PostgreSQL, Neo4j, Spark),
+      and ML/NLP systems. Strong in robust ETL with strict data-integrity guarantees, SQL performance
+      tuning, and operating split-host Linux/Windows infrastructure. Bilingual in English and Korean.
+    </p>
+  </section>
+
+  <section>
+    <h2>Education</h2>
+    <div class="edu-line">
+      <span class="entry-title">University of California, Berkeley — B.A. Data Science</span>
+      <span class="entry-meta">May 2026</span>
+    </div>
+    <div class="entry-sub">GPA 3.81 · Completed degree in 3 years · 2-year military service in Korea (2022–2024)</div>
+    <ul class="certs">
+      <li>Berkeley Changemaker Certificate — UC Berkeley</li>
+      <li>Certificate in Entrepreneurship &amp; Technology — Sutardja Center for Entrepreneurship &amp; Technology (SCET), UC Berkeley</li>
+    </ul>
+  </section>
+
+  <section class="skills">
+    <h2>Skills</h2>
+    <p><span class="k">Languages:</span> Python, SQL, Swift, Bash/Shell, PowerShell</p>
+    <p><span class="k">Data Engineering:</span> ETL/ELT pipeline design, data lake &amp; warehouse architecture, schema design, idempotent ingestion, deduplication, point-in-time alignment, web scraping</p>
+    <p><span class="k">Databases &amp; Big Data:</span> PostgreSQL (TOAST tuning, query-planner diagnostics, performance tuning), Neo4j, Apache Spark, PostGIS, SQLite</p>
+    <p><span class="k">Python Stack:</span> Pandas, Polars, concurrent.futures, BeautifulSoup, requests, psycopg3/pg8000, SQLAlchemy, FastAPI, Pydantic</p>
+    <p><span class="k">ML / NLP:</span> Local LLM inference (Ollama, vLLM), prompt engineering, Graph Neural Networks, FinBERT, entity resolution, backtesting, event studies</p>
+    <p><span class="k">DevOps / Infra:</span> Linux administration, cron/systemd, SSH tunneling, pg_dump/pg_restore, scp/rsync, Docker, Render, GPU resource management</p>
+    <p><span class="k">BI &amp; Full Stack:</span> Tableau, dashboard design, technical writing; SwiftUI, MapKit, CoreLocation, ActivityKit, REST APIs</p>
+    <p><span class="k">Spoken Languages:</span> English (fluent), Korean (fluent)</p>
+  </section>
+
+  <section>
+    <h2>Experience</h2>
+    <div class="entry">
+      <div class="entry-head">
+        <span class="entry-title">Global Key Advisors <span class="role">— Financial Data Analyst</span></span>
+        <span class="entry-meta">Jan 2026 – Present · Bay Area, CA</span>
+      </div>
+      <ul>
+        <li>Re-architected SEC EDGAR scraping pipelines (8-K, 10-K, 10-Q, Form 15/25) from a memory-constrained CSV approach to a threaded PostgreSQL integration, scaling the data lake to <strong>2.05M+ text filings and 3.3M+ financial records across 28,000+ entities</strong>.</li>
+        <li>Automated daily ingestion of a 1.12 GB split-adjusted price panel from a remote Windows host to a Linux Spark cluster, deprecating a fragile vendor pipeline, <strong>eliminating IP-ban risk and saving hours of manual alignment per week</strong>.</li>
+        <li>Administered a PostgreSQL research warehouse (<em>sec_data</em>) holding <strong>33M+ records and 42 GB of text payloads</strong>; architected modular schemas, tuned TOAST storage, and debugged the query planner via system catalogs and ANALYZE statistics.</li>
+        <li>Built data-integrity logic — CIK-aligned joins, point-in-time identifier mapping, strict vendor deduplication, and idempotent upserts (ON CONFLICT) — preventing silent corruption and enabling safe pipeline resume after interruptions.</li>
+        <li>Built NLP extraction with local LLMs (Ollama) parsing filings into directed corporate-relationship edges in a <strong>Neo4j knowledge graph</strong>; engineered an async pipeline processing <strong>~480 filings/hour</strong> unattended.</li>
+        <li>Migrated prediction strategy from FinBERT sentiment to Graph Neural Networks; out-of-sample backtesting <strong>exposed lookahead bias</strong> (a perceived +2.39% return collapsed to negative under 30-bps costs), preventing a losing strategy deployment.</li>
+        <li>Operated split Windows/Linux infrastructure; orchestrated daily cron/systemd/nohup jobs and authored DB restore runbooks (pg_dump/pg_restore, scp, rsync) for multi-gigabyte transfers.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>Projects</h2>
+    <div class="entry">
+      <div class="entry-head">
+        <span class="entry-title">Alpha Signals — Quantitative SEC Event Research Pipeline</span>
+        <span class="entry-meta">Global Key Advisors</span>
+      </div>
+      <div class="tech">Python, Polars, PostgreSQL, Neo4j, Ollama, Graph Neural Networks</div>
+      <ul>
+        <li>Flagship pipeline evaluating whether corporate events in SEC filings predict stock returns; evolved from text sentiment to a GNN over a Neo4j knowledge graph of discrete corporate events.</li>
+        <li>Built an autonomous daily orchestration loop (signals → simulated trades → GNN predictions by 04:30 PDT) and reproducible Python pipelines joining filing text to historical returns.</li>
+      </ul>
+    </div>
+    <div class="entry">
+      <div class="entry-head">
+        <span class="entry-title">PathWise — Intelligent iOS Running App</span>
+        <span class="entry-meta">Spring 2026</span>
+      </div>
+      <div class="tech">Swift (SwiftUI, MapKit, ActivityKit, AVFoundation), FastAPI, PostgreSQL + PostGIS, GraphHopper, Docker</div>
+      <ul>
+        <li>Full-stack architect: built a custom pathfinding orchestrator integrating GraphHopper with PostGIS to inject real-time geofences, road closures, and scenic modifiers; native iOS client with turn-by-turn voice navigation and Live Activities.</li>
+        <li>Achieved <strong>sub-2-second route generation</strong> via parallelized spatial queries; designed a database-agnostic fallback ensuring 100% routing uptime. Presented at Berkeley's startup pitch competition.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>Research &amp; Leadership</h2>
+    <div class="entry">
+      <div class="entry-head">
+        <span class="entry-title">Student Researcher — UC Berkeley <span class="role">(Prof. Jill Berrick, FamiliesNotFees)</span></span>
+      </div>
+      <ul>
+        <li>Applied statistical modeling and ML to national child-welfare datasets; built interactive Tableau dashboards and the project website, growing reach to <strong>4,000+ views and 1,000+ unique visitors</strong>.</li>
+      </ul>
+    </div>
+    <div class="entry">
+      <div class="entry-head">
+        <span class="entry-title">Course Coordinator — ENGIN 270B, UC Berkeley</span>
+        <span class="entry-meta">Summer 2025</span>
+      </div>
+      <ul>
+        <li>Managed operations for a graduate leadership course serving 100+ students across three sections; built automated Excel tracking systems surfacing data-driven metrics for curriculum improvement.</li>
+      </ul>
+    </div>
+    <div class="entry">
+      <div class="entry-head">
+        <span class="entry-title">Berkeley Data Discovery — AI &amp; Education Analytics</span>
+      </div>
+      <ul>
+        <li>Conducted a meta-analysis of national transfer metrics using ML on large-scale education datasets; built interactive dashboards to support strategic decision-making in higher education.</li>
+      </ul>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>
