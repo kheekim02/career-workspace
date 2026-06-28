@@ -34,9 +34,8 @@
     color: var(--accent);
   }
   .title-line {
-    font-size: 9.8pt;
+    font-size: 10pt;
     font-weight: 700;
-    letter-spacing: 1.5px;
     text-transform: uppercase;
     color: var(--muted);
     margin-top: 1px;
@@ -101,22 +100,22 @@
 
   <section>
     <h2>Summary</h2>
-    <p class="summary">UC Berkeley Data Science graduate and data engineer who builds and scales production pipelines, multi-terabyte data lakes and warehouses (PostgreSQL, Neo4j, Spark), and ML/NLP systems with strict data-integrity guarantees and SQL performance tuning. Bilingual in English and Korean.</p>
+    <p class="summary">Data Engineer and UC Berkeley Data Science graduate who designs and scales production ETL/ELT pipelines, multi-terabyte data lakes and warehouses (PostgreSQL, Neo4j, Apache Spark), and ML/NLP systems. Scaled a research data lake to 2M+ filings and 33M+ records with strict data-integrity guarantees, relational data modeling, and SQL performance tuning. Bilingual in English and Korean.</p>
   </section>
 
   <section>
     <h2>Experience</h2>
     <div class="entry">
       <div class="entry-head">
-        <span class="entry-title">Global Key Advisors <span class="role">— Financial Data Analyst</span></span>
-        <span class="entry-meta">01/2026 – Present · Bay Area, CA</span>
+        <span class="entry-title">Financial Data Analyst <span class="role">— Global Key Advisors, Bay Area, CA</span></span>
+        <span class="entry-meta">January 2026 – Present</span>
       </div>
       <ul>
-        <li>Re-architected SEC EDGAR scraping pipelines (8-K, 10-K, 10-Q, Form 15/25) from a memory-constrained CSV approach to a threaded PostgreSQL integration, scaling the data lake to <strong>2.05M+ text filings and 3.3M+ financial records across 28,000+ entities</strong>.</li>
+        <li>Re-architected SEC EDGAR extract-transform-load (ETL) scraping pipelines (8-K, 10-K, 10-Q, Form 15/25) from a memory-constrained CSV approach to a threaded PostgreSQL integration, scaling the data lake to <strong>2.05M+ text filings and 3.3M+ financial records across 28,000+ entities</strong>.</li>
         <li>Administered a PostgreSQL research warehouse (<em>sec_data</em>) holding <strong>33M+ records and 42 GB of text</strong>; architected modular schemas, tuned TOAST storage, and debugged the query planner via system catalogs and ANALYZE statistics.</li>
         <li>Automated daily ingestion of a 1.12 GB price panel from a remote Windows host to a Linux Spark cluster, <strong>eliminating IP-ban risk and saving hours/week</strong>; built data-integrity logic (CIK joins, point-in-time mapping, vendor dedup, idempotent upserts) to prevent silent corruption.</li>
         <li>Built NLP extraction with local LLMs (Ollama) parsing filings into corporate-relationship edges in a <strong>Neo4j knowledge graph</strong> via an async pipeline processing <strong>~480 filings/hour</strong> unattended.</li>
-        <li>Migrated prediction strategy from FinBERT sentiment to Graph Neural Networks; out-of-sample backtesting <strong>exposed lookahead bias</strong> (a perceived +2.39% return collapsed to negative under 30-bps costs), preventing a losing strategy deployment.</li>
+        <li>Migrated prediction strategy from FinBERT sentiment to Graph Neural Networks (GNN); out-of-sample backtesting <strong>exposed lookahead bias</strong> (a perceived +2.39% return collapsed to negative under 30-bps costs), preventing a losing strategy deployment.</li>
       </ul>
     </div>
   </section>
@@ -136,7 +135,7 @@
     <div class="entry">
       <div class="entry-head">
         <span class="entry-title">PathWise — Intelligent iOS Running App</span>
-        <span class="entry-meta">Spring 2026</span>
+        <span class="entry-meta">2026</span>
       </div>
       <div class="tech">Swift (SwiftUI, MapKit, ActivityKit), FastAPI, PostgreSQL + PostGIS, GraphHopper, Docker</div>
       <ul>
@@ -148,18 +147,18 @@
   <section class="skills">
     <h2>Technical Skills</h2>
     <p><span class="k">Languages:</span> Python, SQL, Swift, Bash/Shell</p>
-    <p><span class="k">Data Engineering:</span> ETL/ELT pipeline design, data lake &amp; warehouse architecture, schema design, idempotent ingestion, deduplication, web scraping</p>
-    <p><span class="k">Databases &amp; Big Data:</span> PostgreSQL (TOAST &amp; performance tuning), Neo4j, Apache Spark, PostGIS, SQLite</p>
-    <p><span class="k">Python &amp; Backend:</span> Pandas, Polars, FastAPI, SQLAlchemy, Pydantic, concurrent.futures, BeautifulSoup</p>
-    <p><span class="k">ML / NLP:</span> Local LLM inference (Ollama), Graph Neural Networks, entity resolution, backtesting, event studies</p>
-    <p><span class="k">Tools &amp; BI:</span> Docker, Linux, cron/systemd, pg_dump/pg_restore, Git, Tableau &nbsp;·&nbsp; <span class="k">Spoken:</span> English &amp; Korean (fluent)</p>
+    <p><span class="k">Data Engineering:</span> ETL/ELT pipeline design, data lake &amp; warehouse architecture, relational data modeling, schema design, idempotent ingestion, data quality &amp; validation, deduplication, web scraping</p>
+    <p><span class="k">Databases &amp; Big Data:</span> PostgreSQL (performance tuning, query optimization), Neo4j, Apache Spark (PySpark), PostGIS, SQLite</p>
+    <p><span class="k">Python &amp; Backend:</span> Pandas, Polars, FastAPI, SQLAlchemy, Pydantic, concurrent.futures, BeautifulSoup, REST APIs</p>
+    <p><span class="k">ML / NLP:</span> Local LLM inference (Ollama), Graph Neural Networks (GNN), entity resolution, backtesting, event studies</p>
+    <p><span class="k">Tools &amp; Workflow:</span> Docker, Linux, Git, cron/systemd orchestration, pg_dump/pg_restore, Tableau &nbsp;|&nbsp; <span class="k">Spoken:</span> English &amp; Korean (fluent)</p>
   </section>
 
   <section>
     <h2>Education</h2>
     <div class="edu-line">
       <span class="entry-title">University of California, Berkeley — B.A. Data Science</span>
-      <span class="entry-meta">05/2026</span>
+      <span class="entry-meta">May 2026</span>
     </div>
     <div class="edu-sub">GPA 3.81 · Completed in 3 years · 2-year military service in Korea (2022–2024)</div>
     <div class="inline-list">Certificates: Berkeley Changemaker; Entrepreneurship &amp; Technology (Sutardja Center / SCET, UC Berkeley)</div>
@@ -169,7 +168,7 @@
     <h2>Research &amp; Leadership</h2>
     <ul>
       <li><strong>Student Researcher, UC Berkeley</strong> (Prof. Jill Berrick, <em>FamiliesNotFees</em>) — Applied statistical modeling and ML to national child-welfare data; built Tableau dashboards and the project website, growing reach to 4,000+ views / 1,000+ unique visitors.</li>
-      <li><strong>Course Coordinator, ENGIN 270B</strong> (Summer 2025) — Ran operations for a graduate course of 100+ students; built automated Excel tracking surfacing data-driven metrics for curriculum improvement.</li>
+      <li><strong>Course Coordinator, ENGIN 270B</strong> (2025) — Ran operations for a graduate course of 100+ students; built automated Excel tracking surfacing data-driven metrics for curriculum improvement.</li>
       <li><strong>Berkeley Data Discovery</strong> — Meta-analysis of national transfer metrics using ML on large-scale education datasets, with interactive dashboards for strategic decision-making.</li>
     </ul>
   </section>
