@@ -1,6 +1,6 @@
 /* ============================================================
    Kunhee (Geoffrey) Kim — portfolio
-   Enhanced knowledge graph: filters, clustering, particles, 2D/3D
+   2D knowledge graph: filters, clustering, particles, degree sizing
    ============================================================ */
 
 /* ---------- 1. Graph data model ---------- */
@@ -63,7 +63,7 @@ const LINKS = [
   ["me","python"], ["me","sql"],
 ];
 
-/* ---------- 2. Degree + graph state ---------- */
+/* ---------- 2. Degree + state ---------- */
 const DEGREE = {};
 NODES.forEach(n => { DEGREE[n.id] = 0; });
 LINKS.forEach(([s, t]) => { DEGREE[s]++; DEGREE[t]++; });
@@ -74,10 +74,14 @@ function nodeSize(node) {
   return 8 + d * 2.2;
 }
 
+// Single persistent dataset — nodes keep their positions across filtering.
+const graphData = {
+  nodes: NODES.map(n => ({ ...n, val: nodeSize(n), degree: DEGREE[n.id] })),
+  links: LINKS.map(([source, target]) => ({ source, target })),
+};
+
 const canvasEl = document.getElementById("graph-canvas");
-const modeBtn = document.getElementById("graph-mode");
 let Graph = null;
-let is3D = false;
 let hoverNode = null;
 let highlightNodes = new Set();
 let highlightLinks = new Set();
@@ -85,39 +89,22 @@ let activeGroups = new Set(["person", "org", "project", "skill"]);
 let userInteracting = false;
 let idleTimer = null;
 let motionRaf = null;
-let cameraAngle = 0;
-let introDone = false;
+let driftAngle = 0;
 
-function nodeVisible(node) {
+/* ---------- 3. Visibility-based filtering helpers ---------- */
+function isNodeVisible(node) {
   return activeGroups.has(node.group);
 }
-
-function linkVisible(link) {
-  const s = link.source.id || link.source;
-  const t = link.target.id || link.target;
-  const sn = NODES.find(n => n.id === s);
-  const tn = NODES.find(n => n.id === t);
-  return sn && tn && nodeVisible(sn) && nodeVisible(tn);
-}
-
-function buildGraphData() {
-  const nodes = NODES.filter(nodeVisible).map(n => ({
-    ...n,
-    val: nodeSize(n),
-    degree: DEGREE[n.id],
-  }));
-  const ids = new Set(nodes.map(n => n.id));
-  const links = LINKS
-    .filter(([s, t]) => ids.has(s) && ids.has(t))
-    .map(([source, target]) => ({ source, target }));
-  return { nodes, links };
+function isLinkVisible(link) {
+  const s = typeof link.source === "object" ? link.source : graphData.nodes.find(n => n.id === link.source);
+  const t = typeof link.target === "object" ? link.target : graphData.nodes.find(n => n.id === link.target);
+  return s && t && isNodeVisible(s) && isNodeVisible(t);
 }
 
 function neighbors(node) {
-  const data = Graph ? Graph.graphData() : buildGraphData();
   const ns = new Set([node.id]);
   const ls = new Set();
-  data.links.forEach(l => {
+  graphData.links.forEach(l => {
     const s = l.source.id || l.source;
     const t = l.target.id || l.target;
     if (s === node.id) { ns.add(t); ls.add(l); }
@@ -127,99 +114,45 @@ function neighbors(node) {
 }
 
 function particleCount(link) {
-  if (!linkVisible(link)) return 0;
-  if (highlightLinks.has(link)) return 5;
-  return 1;
+  if (!isLinkVisible(link)) return 0;
+  return highlightLinks.has(link) ? 5 : 1;
 }
-
 function linkColor(link) {
-  if (!linkVisible(link)) return "rgba(0,0,0,0)";
-  if (highlightLinks.has(link)) return "rgba(94,234,212,0.65)";
-  return "rgba(120,135,160,0.22)";
+  if (!isLinkVisible(link)) return "rgba(0,0,0,0)";
+  return highlightLinks.has(link) ? "rgba(94,234,212,0.65)" : "rgba(120,135,160,0.22)";
 }
-
 function linkWidth(link) {
-  if (!linkVisible(link)) return 0;
   return highlightLinks.has(link) ? 2.5 : 1;
 }
 
-function nodeColor(node, dim) {
-  const c = COLORS[node.group] || "#888";
-  if (dim) return c + "44";
-  return c;
-}
-
+/* ---------- 4. Idle motion (gentle pan drift) ---------- */
 function markInteraction() {
   userInteracting = true;
   clearTimeout(idleTimer);
   idleTimer = setTimeout(() => { userInteracting = false; }, 4000);
 }
-
-function stopMotion() {
-  if (motionRaf) cancelAnimationFrame(motionRaf);
-  motionRaf = null;
-}
-
 function startIdleMotion() {
-  stopMotion();
+  if (motionRaf) cancelAnimationFrame(motionRaf);
   function tick() {
-    if (!Graph || userInteracting) {
-      motionRaf = requestAnimationFrame(tick);
-      return;
-    }
-    if (is3D) {
-      cameraAngle += 0.0035;
-      const dist = 320;
-      Graph.cameraPosition(
-        { x: dist * Math.sin(cameraAngle), y: 40, z: dist * Math.cos(cameraAngle) },
-        { x: 0, y: 0, z: 0 },
-        0
-      );
-    } else {
-      cameraAngle += 0.0018;
-      Graph.centerAt(Math.cos(cameraAngle) * 18, Math.sin(cameraAngle) * 12, 0);
+    if (Graph && !userInteracting) {
+      driftAngle += 0.0016;
+      Graph.centerAt(Math.cos(driftAngle) * 14, Math.sin(driftAngle) * 10, 0);
     }
     motionRaf = requestAnimationFrame(tick);
   }
   motionRaf = requestAnimationFrame(tick);
 }
 
+/* ---------- 5. Cluster forces ---------- */
 function applyClusterForces(g) {
-  const data = g.graphData();
-  const forceX = g.d3Force("x");
-  const forceY = g.d3Force("y");
-  if (!forceX || !forceY) return;
-
-  forceX.strength(n => (GROUP_ANCHORS[n.group] ? 0.06 : 0));
-  forceX.x(n => (GROUP_ANCHORS[n.group] || { x: 0 }).x);
-
-  forceY.strength(n => (GROUP_ANCHORS[n.group] ? 0.06 : 0));
-  forceY.y(n => (GROUP_ANCHORS[n.group] || { y: 0 }).y);
-  g.d3ReheatSimulation();
+  const fx = g.d3Force("x");
+  const fy = g.d3Force("y");
+  if (fx) { fx.strength(0.06).x(n => (GROUP_ANCHORS[n.group] || { x: 0 }).x); }
+  if (fy) { fy.strength(0.06).y(n => (GROUP_ANCHORS[n.group] || { y: 0 }).y); }
 }
 
-function runIntroAnimation(g) {
-  const data = g.graphData();
-  data.nodes.forEach(n => {
-    n.x = (Math.random() - 0.5) * 8;
-    n.y = (Math.random() - 0.5) * 8;
-    if (is3D) n.z = (Math.random() - 0.5) * 8;
-  });
-  g.graphData(data);
-  g.d3ReheatSimulation();
-
-  setTimeout(() => {
-    if (is3D) {
-      g.cameraPosition({ x: 0, y: 0, z: 380 }, { x: 0, y: 0, z: 0 }, 1200);
-    } else {
-      g.zoomToFit(1200, 70);
-    }
-    introDone = true;
-    startIdleMotion();
-  }, 1400);
-}
-
-function drawNode2D(node, ctx, scale) {
+/* ---------- 6. Node rendering ---------- */
+function drawNode(node, ctx, scale) {
   const r = Math.sqrt(node.val) * 1.55;
   const dim = highlightNodes.size > 0 && !highlightNodes.has(node.id);
   const color = COLORS[node.group] || "#888";
@@ -272,66 +205,24 @@ function drawNode2D(node, ctx, scale) {
   ctx.fillText(node.label, node.x, node.y + r + 3);
 }
 
-function bindSharedHandlers(g) {
-  g.onNodeHover(node => {
-    highlightNodes.clear();
-    highlightLinks.clear();
-    if (node) {
-      const { ns, ls } = neighbors(node);
-      highlightNodes = ns;
-      highlightLinks = ls;
-      canvasEl.style.cursor = "pointer";
-      hoverNode = node;
-    } else {
-      canvasEl.style.cursor = is3D ? "move" : "grab";
-      hoverNode = null;
-    }
-    g.linkDirectionalParticles(particleCount);
-  });
-
-  g.onNodeClick(node => {
-    markInteraction();
-    showPanel(node);
-    if (is3D) {
-      const dist = 140;
-      g.cameraPosition(
-        { x: node.x + dist * 0.4, y: node.y + dist * 0.3, z: node.z + dist },
-        node,
-        800
-      );
-    } else {
-      g.centerAt(node.x, node.y, 600);
-      g.zoom(2.3, 600);
-    }
-  });
-
-  g.onBackgroundClick(() => {
-    markInteraction();
-    resetPanel();
-  });
-}
-
-function initGraph2D() {
-  is3D = false;
-  canvasEl.classList.remove("mode-3d");
-  canvasEl.innerHTML = "";
-  introDone = false;
-
-  const data = buildGraphData();
+/* ---------- 7. Init ---------- */
+function initGraph() {
   Graph = ForceGraph()(canvasEl)
-    .graphData(data)
+    .graphData(graphData)
     .backgroundColor("rgba(0,0,0,0)")
     .nodeRelSize(4)
     .nodeVal("val")
-    .warmupTicks(80)
-    .cooldownTime(3000)
+    .nodeVisibility(isNodeVisible)
+    .linkVisibility(isLinkVisible)
+    .warmupTicks(60)
+    .cooldownTime(2500)
     .linkColor(linkColor)
     .linkWidth(linkWidth)
     .linkDirectionalParticles(particleCount)
     .linkDirectionalParticleWidth(l => highlightLinks.has(l) ? 2.5 : 1.2)
     .linkDirectionalParticleSpeed(l => highlightLinks.has(l) ? 0.008 : 0.003)
     .linkDirectionalParticleColor(l => highlightLinks.has(l) ? "#5eead4" : "rgba(94,234,212,0.35)")
-    .nodeCanvasObject((node, ctx, scale) => drawNode2D(node, ctx, scale))
+    .nodeCanvasObject(drawNode)
     .nodeCanvasObjectMode(() => "replace")
     .nodePointerAreaPaint((node, color, ctx) => {
       const r = Math.sqrt(node.val) * 1.55 + 5;
@@ -340,10 +231,34 @@ function initGraph2D() {
       ctx.arc(node.x, node.y, r, 0, 2 * Math.PI);
       ctx.fill();
     })
-    .onZoom(() => markInteraction())
-    .onNodeDrag(() => markInteraction());
+    .onZoom(markInteraction)
+    .onNodeDrag(markInteraction)
+    .onNodeHover(node => {
+      highlightNodes.clear();
+      highlightLinks.clear();
+      if (node) {
+        const { ns, ls } = neighbors(node);
+        highlightNodes = ns;
+        highlightLinks = ls;
+        canvasEl.style.cursor = "pointer";
+        hoverNode = node;
+      } else {
+        canvasEl.style.cursor = "grab";
+        hoverNode = null;
+      }
+      Graph.linkDirectionalParticles(particleCount);
+    })
+    .onNodeClick(node => {
+      markInteraction();
+      showPanel(node);
+      Graph.centerAt(node.x, node.y, 600);
+      Graph.zoom(2.3, 600);
+    })
+    .onBackgroundClick(() => {
+      markInteraction();
+      resetPanel();
+    });
 
-  bindSharedHandlers(Graph);
   Graph.d3Force("charge").strength(-280);
   Graph.d3Force("link").distance(l => {
     const sg = l.source.group || "";
@@ -351,89 +266,10 @@ function initGraph2D() {
     return (sg === "skill" || tg === "skill") ? 50 : 85;
   });
   applyClusterForces(Graph);
+
   sizeGraph();
-  runIntroAnimation(Graph);
-  updateModeButton();
-}
-
-function initGraph3D() {
-  if (!window.ForceGraph3D) {
-    alert("3D library still loading — try again in a moment.");
-    return;
-  }
-  is3D = true;
-  canvasEl.classList.add("mode-3d");
-  canvasEl.innerHTML = "";
-  introDone = false;
-
-  const data = buildGraphData();
-  Graph = ForceGraph3D()(canvasEl)
-    .graphData(data)
-    .backgroundColor("rgba(0,0,0,0)")
-    .showNavInfo(false)
-    .nodeVal("val")
-    .nodeLabel(n => `<span style="color:${COLORS[n.group]}">${n.label}</span>`)
-    .nodeColor(n => {
-      const dim = highlightNodes.size > 0 && !highlightNodes.has(n.id);
-      return nodeColor(n, dim);
-    })
-    .nodeOpacity(0.95)
-    .nodeResolution(16)
-    .linkColor(linkColor)
-    .linkWidth(linkWidth)
-    .linkOpacity(0.55)
-    .linkDirectionalParticles(particleCount)
-    .linkDirectionalParticleWidth(l => highlightLinks.has(l) ? 2.5 : 1)
-    .linkDirectionalParticleSpeed(l => highlightLinks.has(l) ? 0.01 : 0.004)
-    .linkDirectionalParticleColor(l => highlightLinks.has(l) ? "#5eead4" : "rgba(94,234,212,0.4)")
-    .warmupTicks(100)
-    .cooldownTime(3500)
-    .onNodeDrag(() => markInteraction());
-
-  bindSharedHandlers(Graph);
-  Graph.d3Force("charge").strength(-180);
-  Graph.d3Force("link").distance(70);
-  applyClusterForces(Graph);
-  sizeGraph();
-  runIntroAnimation(Graph);
-  updateModeButton();
-}
-
-function destroyGraph() {
-  stopMotion();
-  if (Graph && Graph._destructor) Graph._destructor();
-  Graph = null;
-  canvasEl.innerHTML = "";
-}
-
-function switchGraphMode() {
-  markInteraction();
-  resetPanel();
-  highlightNodes.clear();
-  highlightLinks.clear();
-  if (is3D) {
-    destroyGraph();
-    initGraph2D();
-  } else {
-    destroyGraph();
-    initGraph3D();
-  }
-}
-
-function refreshGraphData() {
-  if (!Graph) return;
-  const data = buildGraphData();
-  Graph.graphData(data);
-  applyClusterForces(Graph);
-  highlightNodes.clear();
-  highlightLinks.clear();
-  Graph.linkDirectionalParticles(particleCount);
-}
-
-function updateModeButton() {
-  const key = is3D ? "graph_3d" : "graph_2d";
-  modeBtn.textContent = I18N[key][currentLang === "ko" ? 1 : 0];
-  modeBtn.dataset.mode = is3D ? "3d" : "2d";
+  setTimeout(() => Graph.zoomToFit(800, 70), 700);
+  setTimeout(startIdleMotion, 2000);
 }
 
 function sizeGraph() {
@@ -441,16 +277,23 @@ function sizeGraph() {
   Graph.width(canvasEl.clientWidth).height(canvasEl.clientHeight);
 }
 window.addEventListener("resize", sizeGraph);
-
 canvasEl.addEventListener("mousedown", markInteraction);
 canvasEl.addEventListener("wheel", markInteraction, { passive: true });
 
-/* ---------- 3. Legend filters ---------- */
+/* ---------- 8. Legend filters (visibility-based) ---------- */
+function refreshVisibility() {
+  if (!Graph) return;
+  // Re-assigning the accessors forces force-graph to re-evaluate visibility.
+  Graph.nodeVisibility(isNodeVisible);
+  Graph.linkVisibility(isLinkVisible);
+  Graph.linkDirectionalParticles(particleCount);
+}
+
 document.querySelectorAll(".legend-item").forEach(item => {
   const toggle = () => {
     const group = item.dataset.group;
     if (activeGroups.has(group)) {
-      if (activeGroups.size === 1) return;
+      if (activeGroups.size === 1) return; // keep at least one
       activeGroups.delete(group);
       item.classList.remove("active");
     } else {
@@ -458,7 +301,7 @@ document.querySelectorAll(".legend-item").forEach(item => {
       item.classList.add("active");
     }
     markInteraction();
-    refreshGraphData();
+    refreshVisibility();
   };
   item.addEventListener("click", toggle);
   item.addEventListener("keydown", e => {
@@ -466,7 +309,7 @@ document.querySelectorAll(".legend-item").forEach(item => {
   });
 });
 
-/* ---------- 4. Detail panel ---------- */
+/* ---------- 9. Detail panel ---------- */
 const panelDefault = document.querySelector(".panel-default");
 const panelDetail = document.querySelector(".panel-detail");
 const GROUP_LABELS = {
@@ -492,7 +335,6 @@ function showPanel(node) {
   document.getElementById("panel-links").innerHTML =
     node.link ? `<a href="${node.link}" target="_blank" rel="noopener">↗ ${node.link.replace("https://","")}</a>` : "";
 }
-
 function resetPanel() {
   panelDetail.hidden = true;
   panelDefault.hidden = false;
@@ -503,16 +345,10 @@ document.getElementById("graph-reset").addEventListener("click", () => {
   resetPanel();
   highlightNodes.clear();
   highlightLinks.clear();
-  if (is3D) {
-    Graph.cameraPosition({ x: 0, y: 0, z: 380 }, { x: 0, y: 0, z: 0 }, 800);
-  } else {
-    Graph.zoomToFit(600, 70);
-  }
+  Graph.zoomToFit(600, 70);
 });
 
-modeBtn.addEventListener("click", switchGraphMode);
-
-/* ---------- 5. i18n ---------- */
+/* ---------- 10. i18n ---------- */
 const I18N = {
   nav_graph: ["Graph", "그래프"],
   nav_experience: ["Experience", "경력"],
@@ -531,8 +367,8 @@ const I18N = {
   hero_contact: ["Get in touch", "연락하기"],
   graph_title: ["Knowledge Graph", "지식 그래프"],
   graph_sub: [
-    "My career as a graph — the way I build my systems. Drag nodes, hover to trace connections, click to filter by type, and toggle 3D for the full view.",
-    "그래프로 표현한 제 커리어 — 제가 시스템을 만드는 방식 그대로. 노드를 드래그하고, 호버해 연결을 추적하고, 범례로 유형을 필터링하고, 3D로 전환해 전체를 보세요."
+    "My career as a graph — the way I build my systems. Drag nodes, hover to trace connections, and click the legend to filter by type.",
+    "그래프로 표현한 제 커리어 — 제가 시스템을 만드는 방식 그대로. 노드를 드래그하고, 호버해 연결을 추적하고, 범례를 클릭해 유형별로 필터링하세요."
   ],
   panel_hint: ["◍ Click a node to inspect", "◍ 노드를 클릭해 살펴보세요"],
   legend_filter: ["Filter by type — click to toggle", "유형별 필터 — 클릭하여 전환"],
@@ -541,8 +377,6 @@ const I18N = {
   legend_project: ["Projects", "프로젝트"],
   legend_skill: ["Skills & Tech", "기술"],
   graph_reset: ["⟳ Reset view", "⟳ 보기 초기화"],
-  graph_2d: ["Switch to 3D", "3D로 전환"],
-  graph_3d: ["Switch to 2D", "2D로 전환"],
   graph_tip: ["Tip: scroll to zoom · drag to pan · click legend to filter", "팁: 스크롤 확대/축소 · 드래그 이동 · 범례 클릭 필터"],
   exp_title: ["Experience", "경력"],
   exp_role: ["Financial Data Analyst", "재무 데이터 분석가"],
@@ -595,14 +429,13 @@ function applyLang(lang) {
   });
   document.querySelector(".lang-en").classList.toggle("active", lang === "en");
   document.querySelector(".lang-ko").classList.toggle("active", lang === "ko");
-  updateModeButton();
   if (!panelDetail.hidden && hoverNode) showPanel(hoverNode);
 }
 document.getElementById("lang-toggle").addEventListener("click", () => {
   applyLang(currentLang === "en" ? "ko" : "en");
 });
 
-/* ---------- 6. Animated stat counters ---------- */
+/* ---------- 11. Animated stat counters ---------- */
 function animateCounters() {
   document.querySelectorAll(".stat-num").forEach(el => {
     const target = +el.dataset.count;
@@ -624,9 +457,9 @@ function animateCounters() {
   });
 }
 
-/* ---------- 7. Boot ---------- */
+/* ---------- 12. Boot ---------- */
 document.getElementById("year").textContent = new Date().getFullYear();
 window.addEventListener("load", () => {
-  if (window.ForceGraph) initGraph2D();
+  if (window.ForceGraph) initGraph();
   animateCounters();
 });
