@@ -15,8 +15,8 @@
   body {
     font-family: "Calibri", "Helvetica Neue", Arial, sans-serif;
     color: var(--ink);
-    font-size: 10pt;
-    line-height: 1.26;
+    font-size: 9.7pt;
+    line-height: 1.22;
     background: #f4f5f7;
   }
   .page {
@@ -47,10 +47,10 @@
     color: var(--accent);
     border-bottom: 1.3px solid var(--accent);
     padding-bottom: 1px;
-    margin: 10px 0 5px;
+    margin: 8px 0 4px;
   }
   .summary { margin: 0; text-align: justify; }
-  .entry { margin-bottom: 6px; }
+  .entry { margin-bottom: 4px; }
   .entry-head {
     display: flex;
     justify-content: space-between;
@@ -72,7 +72,7 @@
     .page { margin: 0; box-shadow: none; max-width: none; width: 100%; padding: 0; }
     a { color: var(--ink); }
   }
-  @page { size: Letter; margin: 0.45in 0.55in; }
+  @page { size: Letter; margin: 0.4in 0.5in; }
 </style>
 </head>
 <body>
@@ -82,6 +82,7 @@
     <h1>Kunhee (Geoffrey) Kim</h1>
     <div class="contact">
       <a href="mailto:kunheekim02@gmail.com">kunheekim02@gmail.com</a>
+      <span class="sep">|</span>(510) 365-8688
       <span class="sep">|</span>Berkeley / Bay Area, CA
       <span class="sep">|</span><a href="https://www.linkedin.com/in/kk02/">linkedin.com/in/kk02</a>
       <span class="sep">|</span><a href="https://github.com/kheekim02">github.com/kheekim02</a>
@@ -114,11 +115,11 @@
         <span class="entry-meta">Jan 2026 – Present · Bay Area, CA</span>
       </div>
       <ul>
-        <li>Re-architected SEC EDGAR scraping pipelines from a memory-constrained CSV approach to a threaded PostgreSQL integration, scaling the data lake to <strong>2.05M+ text filings and 3.3M+ financial records across 28,000+ entities</strong>.</li>
-        <li>Administered a PostgreSQL research warehouse holding <strong>33M+ records and 42 GB of text payloads</strong>; architected modular schemas, tuned TOAST storage, and debugged the query planner via system catalogs and ANALYZE statistics.</li>
-        <li>Automated daily ingestion of a 1.12 GB price panel to a Linux Spark cluster with CIK-aligned joins, vendor deduplication, and idempotent upserts, <strong>eliminating IP-ban risk and saving hours of manual alignment weekly</strong>.</li>
-        <li>Built NLP extraction with local LLMs (Ollama) parsing filings into corporate-relationship edges in a <strong>Neo4j knowledge graph</strong> via an async pipeline processing <strong>~480 filings/hour</strong> unattended.</li>
-        <li>Migrated the prediction strategy from FinBERT sentiment to Graph Neural Networks; out-of-sample backtesting <strong>exposed lookahead bias</strong> (a +2.39% return collapsed to negative under 30-bps costs), preventing a losing strategy deployment.</li>
+        <li><strong>Saved the firm from deploying a losing trading strategy</strong> by exposing lookahead bias in a legacy sentiment model through rigorous out-of-sample backtesting — a perceived +2.39% edge collapsed to negative returns under realistic transaction costs.</li>
+        <li>Replaced a fragile CSV-based SEC scraper with a resilient threaded PostgreSQL pipeline, <strong>enabling the team to ingest and query the full universe of public filings</strong> without file-size limits or data loss on restarts (28,000+ entities).</li>
+        <li>Designed a modular PostgreSQL warehouse schema and tuned storage so analysts could <strong>run complex cross-filing queries without performance bottlenecks</strong> on tens of millions of records.</li>
+        <li>Automated daily market-data ingestion from a remote Windows host to a Linux Spark cluster, <strong>removing the firm's exposure to vendor IP bans and eliminating hours of manual alignment each week</strong>.</li>
+        <li>Engineered an unattended NLP pipeline that converts raw filing text into structured corporate-relationship graphs in Neo4j, <strong>giving researchers queryable supplier/customer/acquirer edges</strong> without manual review.</li>
       </ul>
     </div>
   </section>
@@ -128,21 +129,46 @@
     <div class="entry">
       <div class="entry-head">
         <span class="entry-title">Alpha Signals — Quantitative SEC Event Research Pipeline</span>
-        <span class="entry-meta">Global Key Advisors</span>
+        <span class="entry-meta"><a href="https://github.com/kheekim02">github.com/kheekim02</a></span>
       </div>
       <div class="tech">Python, Polars, PostgreSQL, Neo4j, Ollama, Graph Neural Networks</div>
       <ul>
-        <li>Built an autonomous daily pipeline (signals → simulated trades → GNN predictions by 04:30 PDT) evaluating whether SEC-filing corporate events predict stock returns over a Neo4j knowledge graph.</li>
+        <li>Designed an autonomous daily pipeline (signals → simulated trades → GNN predictions by 04:30 PDT) that lets researchers test whether SEC-filing corporate events predict stock returns — fully hands-off end to end.</li>
+        <li>Modeled discrete corporate events as a Neo4j knowledge graph, enabling a Graph Neural Network to surface mispricings that flat text-sentiment models missed.</li>
       </ul>
     </div>
     <div class="entry">
       <div class="entry-head">
         <span class="entry-title">PathWise — Intelligent iOS Running App</span>
-        <span class="entry-meta">Spring 2026</span>
+        <span class="entry-meta">Spring 2026 · <a href="https://github.com/kheekim02">github.com/kheekim02</a></span>
       </div>
       <div class="tech">Swift (SwiftUI, MapKit, ActivityKit), FastAPI, PostgreSQL + PostGIS, GraphHopper, Docker</div>
       <ul>
-        <li>Full-stack architect of a routing app with a GraphHopper + PostGIS orchestrator and native turn-by-turn navigation; achieved <strong>sub-2-second route generation</strong> and 100% uptime via a database-agnostic fallback. Presented at Berkeley's startup pitch competition.</li>
+        <li>Built a routing engine combining GraphHopper with PostGIS to generate safe, scenic running loops with native turn-by-turn voice navigation, achieving <strong>sub-2-second route generation</strong>.</li>
+        <li>Designed a database-agnostic fallback that kept routing available during outages, and <strong>presented the app at Berkeley's startup pitch competition</strong>.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>Leadership &amp; Research</h2>
+    <div class="entry">
+      <div class="entry-head">
+        <span class="entry-title">Student Researcher, UC Berkeley <span class="role">— Prof. Jill Berrick (FamiliesNotFees)</span></span>
+        <span class="entry-meta">2024 – 2025</span>
+      </div>
+      <ul>
+        <li>Used statistical modeling on national child-welfare data to show how charging low-income parents for foster care keeps children in the system longer, equipping state lawmakers with evidence to change the policy.</li>
+        <li>Built Tableau dashboards and rebuilt the project website, <strong>growing reach to 4,000+ views and 1,000+ unique visitors</strong>.</li>
+      </ul>
+    </div>
+    <div class="entry">
+      <div class="entry-head">
+        <span class="entry-title">Course Coordinator, ENGIN 270B <span class="role">— UC Berkeley Fung Institute</span></span>
+        <span class="entry-meta">Summer 2025</span>
+      </div>
+      <ul>
+        <li>Built automated Excel tracking systems for a 100+ student graduate cohort, giving faculty actionable metrics to improve the curriculum.</li>
       </ul>
     </div>
   </section>
@@ -154,7 +180,6 @@
       <span class="entry-meta">May 2026</span>
     </div>
     <div class="edu-sub">GPA 3.81 · Completed in 3 years · Berkeley Changemaker &amp; Entrepreneurship &amp; Technology (SCET) Certificates · 2-yr military service, Korea (2022–24)</div>
-    <div class="tech" style="margin-top:2px;"><strong>Other experience:</strong> Student Researcher (Prof. Berrick, <em>FamiliesNotFees</em>) — ML on child-welfare data, Tableau dashboards, site grew to 4,000+ views; Course Coordinator, ENGIN 270B (100+ students); Berkeley Data Discovery — ML meta-analysis of education metrics.</div>
   </section>
 
 </div>
