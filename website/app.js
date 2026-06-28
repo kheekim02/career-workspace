@@ -86,14 +86,8 @@ let hoverNode = null;
 let highlightNodes = new Set();
 let highlightLinks = new Set();
 let activeGroups = new Set(["person", "org", "project", "skill"]);
-let userInteracting = false;
-let idleTimer = null;
-let motionRaf = null;
-let driftAngle = 0;
-let hoverCenter = null;   // transient: node under the cursor
-let centeredNode = null;  // sticky: node selected via click
-let camZoom = null;
 let baseZoom = 1;
+let focusNode = null;     // node clicked to bring to center
 
 /* ---------- 3. Visibility-based filtering helpers ---------- */
 function isNodeVisible(node) {
@@ -129,48 +123,7 @@ function linkWidth(link) {
   return highlightLinks.has(link) ? 2.5 : 1;
 }
 
-/* ---------- 4. Camera loop (idle drift + hover-to-center) ----------
-   force-graph halts its own render loop after cooldown, which freezes any
-   animated centerAt(). So we run our own rAF and pan with instant
-   centerAt(...,0), easing toward a target each frame. */
-function markInteraction() {
-  userInteracting = true;
-  clearTimeout(idleTimer);
-  idleTimer = setTimeout(() => { userInteracting = false; }, 4000);
-}
-function startCameraLoop() {
-  if (motionRaf) cancelAnimationFrame(motionRaf);
-  function tick() {
-    if (Graph) {
-      const cur = Graph.centerAt();
-      const focus = hoverCenter || centeredNode;
-      let tx = cur.x, ty = cur.y;
-      if (focus) {
-        tx = focus.x;
-        ty = focus.y;
-      } else if (!userInteracting) {
-        driftAngle += 0.0016;
-        tx = Math.cos(driftAngle) * 14;
-        ty = Math.sin(driftAngle) * 10;
-      }
-      const nx = cur.x + (tx - cur.x) * 0.12;
-      const ny = cur.y + (ty - cur.y) * 0.12;
-      if (Math.abs(nx - cur.x) > 0.01 || Math.abs(ny - cur.y) > 0.01) {
-        Graph.centerAt(nx, ny, 0);
-      }
-      if (camZoom != null) {
-        const cz = Graph.zoom();
-        const nz = cz + (camZoom - cz) * 0.12;
-        if (Math.abs(nz - cz) > 0.002) Graph.zoom(nz, 0);
-        else { Graph.zoom(camZoom, 0); camZoom = null; }
-      }
-    }
-    motionRaf = requestAnimationFrame(tick);
-  }
-  motionRaf = requestAnimationFrame(tick);
-}
-
-/* ---------- 5. Cluster forces ---------- */
+/* ---------- 4. Cluster forces (initial organic layout only) ---------- */
 function applyClusterForces(g) {
   const fx = g.d3Force("x");
   const fy = g.d3Force("y");
@@ -178,16 +131,88 @@ function applyClusterForces(g) {
   if (fy) { fy.strength(0.06).y(n => (GROUP_ANCHORS[n.group] || { y: 0 }).y); }
 }
 
-// The camera loop eases the view so the hovered node reaches the viewport
-// center; every other node slides accordingly.
-function centerOnNode(node) {
-  hoverCenter = node;
+/* ---------- 5. Click-to-center with magnetic reorganization ----------
+   force-graph's d3 engine won't reliably restart after it cools, so we drive
+   the motion ourselves with a per-node spring. The clicked node glides to the
+   view center; its neighbors settle on an inner ring and everything else on an
+   outer ring, so the whole graph magnetically reorganizes. force-graph's render
+   loop is always alive, so mutating node x/y repaints automatically. */
+const SPRING_K = 0.045;   // pull toward target (higher = snappier)
+const SPRING_D = 0.80;    // velocity damping (lower = more magnetic settle)
+const RING_INNER = 78;
+const RING_OUTER = 158;
+const homePos = new Map();
+let layoutTargets = null;
+let layoutRaf = null;
+
+function captureHome() {
+  graphData.nodes.forEach(n => homePos.set(n.id, { x: n.x, y: n.y }));
 }
 
-// On unhover, the camera loop eases back to the selected node (if any) or
-// the overall centered view.
-function releaseCenteredNode() {
-  hoverCenter = null;
+function buildRadialTargets(focus) {
+  const c = Graph.centerAt();
+  const visible = graphData.nodes.filter(isNodeVisible);
+  const nb = neighbors(focus).ns;
+  const neigh = visible.filter(n => n.id !== focus.id && nb.has(n.id));
+  const others = visible.filter(n => n.id !== focus.id && !nb.has(n.id));
+  const t = new Map();
+  t.set(focus.id, { x: c.x, y: c.y });
+  const place = (list, radius, offset) => {
+    list.forEach((n, i) => {
+      const a = -Math.PI / 2 + offset + (i * 2 * Math.PI) / Math.max(list.length, 1);
+      t.set(n.id, { x: c.x + Math.cos(a) * radius, y: c.y + Math.sin(a) * radius });
+    });
+  };
+  place(neigh, RING_INNER, 0);
+  place(others, RING_OUTER, 0.35);
+  return t;
+}
+
+function focusOnNode(node) {
+  if (!Graph) return;
+  if (homePos.size === 0) captureHome();   // safety if clicked before settle
+  if (focusNode === node) { unfocus(); return; }
+  focusNode = node;
+  layoutTargets = buildRadialTargets(node);
+  startLayoutLoop();
+}
+
+function unfocus() {
+  if (!Graph || !focusNode) return;
+  focusNode = null;
+  const t = new Map();
+  homePos.forEach((p, id) => t.set(id, { x: p.x, y: p.y }));
+  layoutTargets = t;
+  startLayoutLoop();
+}
+
+function startLayoutLoop() {
+  if (!layoutRaf) layoutRaf = requestAnimationFrame(layoutTick);
+}
+
+function layoutTick() {
+  layoutRaf = null;
+  if (!Graph || !layoutTargets) return;
+  let moving = false;
+  graphData.nodes.forEach(n => {
+    const tg = layoutTargets.get(n.id);
+    if (!tg) return;
+    n.__vx = ((n.__vx || 0) + (tg.x - n.x) * SPRING_K) * SPRING_D;
+    n.__vy = ((n.__vy || 0) + (tg.y - n.y) * SPRING_K) * SPRING_D;
+    n.x += n.__vx;
+    n.y += n.__vy;
+    if (Math.abs(tg.x - n.x) > 0.4 || Math.abs(tg.y - n.y) > 0.4 ||
+        Math.abs(n.__vx) > 0.4 || Math.abs(n.__vy) > 0.4) moving = true;
+  });
+  if (moving) {
+    layoutRaf = requestAnimationFrame(layoutTick);
+  } else {
+    layoutTargets.forEach((tg, id) => {
+      const n = graphData.nodes.find(x => x.id === id);
+      if (n) { n.x = tg.x; n.y = tg.y; n.__vx = 0; n.__vy = 0; }
+    });
+    if (!focusNode) layoutTargets = null;  // released: free nodes for dragging
+  }
 }
 
 /* ---------- 6. Node styling (built-in renderer — reliable across browsers) ---------- */
@@ -235,7 +260,6 @@ function initGraph() {
     .linkDirectionalParticleWidth(l => highlightLinks.has(l) ? 2.5 : 1.2)
     .linkDirectionalParticleSpeed(l => highlightLinks.has(l) ? 0.008 : 0.003)
     .linkDirectionalParticleColor(l => highlightLinks.has(l) ? "#5eead4" : "rgba(94,234,212,0.35)")
-    .onNodeDrag(markInteraction)
     .onNodeHover(node => {
       highlightNodes.clear();
       highlightLinks.clear();
@@ -245,25 +269,20 @@ function initGraph() {
         highlightLinks = ls;
         canvasEl.style.cursor = "pointer";
         hoverNode = node;
-        centerOnNode(node);
       } else {
         canvasEl.style.cursor = "grab";
         hoverNode = null;
-        releaseCenteredNode();
       }
       Graph.nodeColor(nodeColor);
       Graph.linkDirectionalParticles(particleCount);
     })
     .onNodeClick(node => {
       showPanel(node);
-      centeredNode = node;
-      camZoom = Math.max(baseZoom * 1.6, 2.2);
+      focusOnNode(node);
     })
     .onBackgroundClick(() => {
       resetPanel();
-      centeredNode = null;
-      camZoom = baseZoom;
-      userInteracting = false;
+      unfocus();
     });
 
   Graph.d3Force("charge").strength(-280);
@@ -278,14 +297,15 @@ function initGraph() {
   // Re-fit several times to survive late layout/font shifts that can leave
   // the canvas mis-sized (and nodes off-screen) on first paint.
   [150, 500, 1000, 1800].forEach(t =>
-    setTimeout(() => { sizeGraph(); if (Graph) Graph.zoomToFit(500, 70); }, t)
+    setTimeout(() => { sizeGraph(); if (Graph && !focusNode) Graph.zoomToFit(500, 70); }, t)
   );
-  setTimeout(() => { if (Graph) baseZoom = Graph.zoom(); }, 2000);
-  setTimeout(startCameraLoop, 2200);
+  setTimeout(() => {
+    if (Graph && !focusNode) { baseZoom = Graph.zoom(); captureHome(); }
+  }, 2000);
   if (/[?&]debug=1/.test(location.search)) {
     window.__G = Graph;
-    window.__centerOnNode = centerOnNode;
-    window.__releaseCenteredNode = releaseCenteredNode;
+    window.__focusOnNode = focusOnNode;
+    window.__unfocus = unfocus;
   }
   updateDebug();
 }
@@ -301,8 +321,6 @@ window.addEventListener("resize", sizeGraph);
 if (typeof ResizeObserver !== "undefined") {
   new ResizeObserver(() => sizeGraph()).observe(canvasEl);
 }
-canvasEl.addEventListener("mousedown", markInteraction);
-canvasEl.addEventListener("wheel", markInteraction, { passive: true });
 
 /* ---------- 7b. Visible diagnostic (add ?debug=1 to URL) ---------- */
 function updateDebug() {
@@ -337,6 +355,15 @@ function refreshVisibility() {
   Graph.nodeVisibility(isNodeVisible);
   Graph.linkVisibility(isLinkVisible);
   Graph.linkDirectionalParticles(particleCount);
+  // If a node is focused, re-fit the rings to the now-visible set.
+  if (focusNode) {
+    if (isNodeVisible(focusNode)) {
+      layoutTargets = buildRadialTargets(focusNode);
+      startLayoutLoop();
+    } else {
+      unfocus();
+    }
+  }
 }
 
 document.querySelectorAll(".legend-item").forEach(item => {
@@ -350,7 +377,6 @@ document.querySelectorAll(".legend-item").forEach(item => {
       activeGroups.add(group);
       item.classList.add("active");
     }
-    markInteraction();
     refreshVisibility();
   };
   item.addEventListener("click", toggle);
@@ -394,9 +420,7 @@ document.getElementById("graph-reset").addEventListener("click", () => {
   resetPanel();
   highlightNodes.clear();
   highlightLinks.clear();
-  centeredNode = null;
-  camZoom = baseZoom;
-  userInteracting = false;
+  unfocus();
   if (Graph) Graph.nodeColor(nodeColor);
 });
 
@@ -419,8 +443,8 @@ const I18N = {
   hero_contact: ["Get in touch", "연락하기"],
   graph_title: ["Knowledge Graph", "지식 그래프"],
   graph_sub: [
-    "My career as a graph — the way I build my systems. Drag nodes, hover to trace connections, and click the legend to filter by type.",
-    "그래프로 표현한 제 커리어 — 제가 시스템을 만드는 방식 그대로. 노드를 드래그하고, 호버해 연결을 추적하고, 범례를 클릭해 유형별로 필터링하세요."
+    "My career as a graph — the way I build my systems. Click a node to pull it to the center and watch the graph reorganize. Hover to trace connections, and use the legend to filter by type.",
+    "그래프로 표현한 제 커리어 — 제가 시스템을 만드는 방식 그대로. 노드를 클릭하면 중앙으로 끌려오며 그래프가 재배치됩니다. 호버해 연결을 추적하고, 범례로 유형을 필터링하세요."
   ],
   panel_hint: ["◍ Click a node to inspect", "◍ 노드를 클릭해 살펴보세요"],
   legend_filter: ["Filter by type — click to toggle", "유형별 필터 — 클릭하여 전환"],
