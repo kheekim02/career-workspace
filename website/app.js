@@ -119,7 +119,7 @@ function particleCount(link) {
 }
 function linkColor(link) {
   if (!isLinkVisible(link)) return "rgba(0,0,0,0)";
-  return highlightLinks.has(link) ? "rgba(94,234,212,0.65)" : "rgba(120,135,160,0.22)";
+  return highlightLinks.has(link) ? "rgba(94,234,212,0.75)" : "rgba(120,135,160,0.45)";
 }
 function linkWidth(link) {
   return highlightLinks.has(link) ? 2.5 : 1;
@@ -151,86 +151,32 @@ function applyClusterForces(g) {
   if (fy) { fy.strength(0.06).y(n => (GROUP_ANCHORS[n.group] || { y: 0 }).y); }
 }
 
-/* ---------- 6. Node rendering ---------- */
-function drawNode(node, ctx, scale) {
-  const r = Math.sqrt(node.val) * 1.55;
+/* ---------- 6. Node styling (built-in renderer — reliable across browsers) ---------- */
+function nodeColor(node) {
   const dim = highlightNodes.size > 0 && !highlightNodes.has(node.id);
-  const color = COLORS[node.group] || "#888";
-  const t = Date.now() / 1000;
-
-  if (highlightNodes.has(node.id)) {
-    ctx.beginPath();
-    ctx.arc(node.x, node.y, r + 7, 0, 2 * Math.PI);
-    ctx.fillStyle = color + "28";
-    ctx.fill();
-  }
-
-  if (node.id === "me") {
-    const pulse = 0.5 + 0.5 * Math.sin(t * 2.2);
-    ctx.beginPath();
-    ctx.arc(node.x, node.y, r + 6 + pulse * 5, 0, 2 * Math.PI);
-    ctx.strokeStyle = `rgba(244,197,66,${0.15 + pulse * 0.2})`;
-    ctx.lineWidth = 2 / scale;
-    ctx.stroke();
-  }
-
-  const grad = ctx.createRadialGradient(node.x - r * 0.3, node.y - r * 0.3, 0, node.x, node.y, r);
-  grad.addColorStop(0, dim ? color + "55" : color);
-  grad.addColorStop(1, dim ? color + "22" : color + "cc");
-  ctx.beginPath();
-  ctx.arc(node.x, node.y, r, 0, 2 * Math.PI);
-  ctx.fillStyle = grad;
-  ctx.fill();
-
-  if (node.id === "me") {
-    ctx.lineWidth = 2 / scale;
-    ctx.strokeStyle = "#fff";
-    ctx.stroke();
-  }
-
-  const abbrev = node.group === "skill" ? node.label.slice(0, 2).toUpperCase() : "";
-  if (abbrev && r > 8) {
-    ctx.font = `600 ${Math.max(8 / scale, 2.5)}px Inter, sans-serif`;
-    ctx.fillStyle = dim ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.45)";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(abbrev, node.x, node.y);
-  }
-
-  const fontSize = Math.max(10 / scale, 3);
-  ctx.font = `${node.id === "me" ? 700 : 500} ${fontSize}px Inter, sans-serif`;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "top";
-  ctx.fillStyle = dim ? "rgba(230,237,243,0.22)" : "#e6edf3";
-  ctx.fillText(node.label, node.x, node.y + r + 3);
+  const c = COLORS[node.group] || "#888";
+  return dim ? c + "44" : c;
 }
 
 /* ---------- 7. Init ---------- */
 function initGraph() {
   Graph = ForceGraph()(canvasEl)
     .graphData(graphData)
-    .backgroundColor("rgba(0,0,0,0)")
+    .backgroundColor("#0d141e")
     .nodeRelSize(4)
     .nodeVal("val")
+    .nodeColor(nodeColor)
+    .nodeLabel(n => n.label)
     .nodeVisibility(isNodeVisible)
     .linkVisibility(isLinkVisible)
-    .warmupTicks(60)
-    .cooldownTime(2500)
+    .warmupTicks(80)
+    .cooldownTime(3000)
     .linkColor(linkColor)
     .linkWidth(linkWidth)
     .linkDirectionalParticles(particleCount)
     .linkDirectionalParticleWidth(l => highlightLinks.has(l) ? 2.5 : 1.2)
     .linkDirectionalParticleSpeed(l => highlightLinks.has(l) ? 0.008 : 0.003)
     .linkDirectionalParticleColor(l => highlightLinks.has(l) ? "#5eead4" : "rgba(94,234,212,0.35)")
-    .nodeCanvasObject(drawNode)
-    .nodeCanvasObjectMode(() => "replace")
-    .nodePointerAreaPaint((node, color, ctx) => {
-      const r = Math.sqrt(node.val) * 1.55 + 5;
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.arc(node.x, node.y, r, 0, 2 * Math.PI);
-      ctx.fill();
-    })
     .onZoom(markInteraction)
     .onNodeDrag(markInteraction)
     .onNodeHover(node => {
@@ -246,6 +192,7 @@ function initGraph() {
         canvasEl.style.cursor = "grab";
         hoverNode = null;
       }
+      Graph.nodeColor(nodeColor);
       Graph.linkDirectionalParticles(particleCount);
     })
     .onNodeClick(node => {
