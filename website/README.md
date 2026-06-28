@@ -7,15 +7,20 @@ data-architecture pipeline diagrams.
 ## Stack
 
 - Plain **HTML / CSS / JavaScript** — no build step, no dependencies to maintain
-- [`force-graph`](https://github.com/vasturiano/force-graph) loaded via CDN for the knowledge graph
+- [`force-graph`](https://github.com/vasturiano/force-graph) **self-hosted** in `vendor/` (no CDN, works offline / behind ad blockers)
 - Google Fonts: Inter + JetBrains Mono
 
 ```
 website/
 ├── index.html   # structure + content
 ├── styles.css   # dark "engineer" theme, responsive
-└── app.js        # graph data, interactions, i18n, counters
+├── app.js        # graph data, interactions, i18n, counters
+└── vendor/
+    └── force-graph.min.js   # self-hosted graph library (v1.43.5)
 ```
+
+> Asset references in `index.html` carry a `?v=` cache-busting suffix. After editing
+> `app.js` / `styles.css`, bump that suffix so browsers fetch the matching files together.
 
 ## Run locally
 

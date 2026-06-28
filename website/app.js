@@ -459,7 +459,26 @@ function animateCounters() {
 
 /* ---------- 12. Boot ---------- */
 document.getElementById("year").textContent = new Date().getFullYear();
+
+function showGraphFallback() {
+  canvasEl.innerHTML =
+    '<div class="graph-fallback">' +
+    "<p>The interactive graph couldn't load in this browser.</p>" +
+    "<p>Try a hard refresh (Cmd/Ctrl + Shift + R) or a different browser.</p>" +
+    "</div>";
+}
+
 window.addEventListener("load", () => {
-  if (window.ForceGraph) initGraph();
+  if (window.ForceGraph) {
+    try {
+      initGraph();
+    } catch (err) {
+      console.error("Graph init failed:", err);
+      showGraphFallback();
+    }
+  } else {
+    console.error("force-graph library failed to load.");
+    showGraphFallback();
+  }
   animateCounters();
 });
