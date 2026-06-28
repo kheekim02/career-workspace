@@ -20,7 +20,9 @@ infrastructure. Bilingual in English and Korean.
 ## Education
 
 **University of California, Berkeley** — B.A. Data Science
-*Graduated May 2026*
+*Graduated May 2026 · GPA 3.81 · Completed degree in 3 years*
+
+Served a 2-year mandatory military service (2022–2024) during studies.
 
 ---
 
@@ -46,7 +48,7 @@ pg_dump/pg_restore, scp/rsync, Docker, Render, GPU resource management
 ## Experience
 
 ### Global Key Advisors — Financial Data Analyst
-*January 2026 – Present*
+*January 2026 – Present · Bay Area, CA*
 
 Quantitative intelligence work spanning data engineering, database administration, NLP/ML,
 research, and DevOps.
@@ -120,13 +122,13 @@ research, and DevOps.
 ### Alpha Signals — Quantitative SEC Event Research Pipeline
 *Python, Polars, PostgreSQL, Neo4j, Ollama (gpt-oss:20b), Graph Neural Networks*
 
-Self-directed research pipeline evaluating whether corporate events in SEC filings (8-Ks, 10-Ks)
-predict subsequent stock returns — evolving from 1D text sentiment to a Graph Neural Network over a
-Neo4j knowledge graph of discrete corporate events. Built reproducible Python pipelines joining
-filing text to historical returns, an autonomous daily orchestration loop (signals → simulated
-trades → GNN predictions by 04:30 PDT), and out-of-sample backtests that flagged lookahead bias in a
-legacy sentiment model. *(Foundational system behind my Global Key Advisors work; see above for
-production details.)*
+Flagship research pipeline built as Financial Data Analyst at Global Key Advisors, evaluating
+whether corporate events in SEC filings (8-Ks, 10-Ks) predict subsequent stock returns — evolving
+from 1D text sentiment to a Graph Neural Network over a Neo4j knowledge graph of discrete corporate
+events. Built reproducible Python pipelines joining filing text to historical returns, an autonomous
+daily orchestration loop (signals → simulated trades → GNN predictions by 04:30 PDT), and
+out-of-sample backtests that flagged lookahead bias in a legacy sentiment model. *(See Global Key
+Advisors role above for production details.)*
 
 ### PathWise — Intelligent iOS Running App
 *Swift (SwiftUI, MapKit, CoreLocation, ActivityKit, AVFoundation), Python (FastAPI, SQLAlchemy),
@@ -134,7 +136,7 @@ Docker, Render, PostgreSQL + PostGIS, GraphHopper, Open-Meteo, Overpass (OSM), S
 
 An iOS running app that dynamically generates elevation-controlled, geofenced routing loops and
 guides runners with native turn-by-turn audio navigation and Live Activities. **Role: Full-Stack
-Architect & Lead Developer.**
+Architect & Lead Developer.** *(Spring 2026)*
 
 - Architected a custom pathfinding orchestrator integrating GraphHopper with PostGIS to inject
   real-time safety geofences, road closures, and scenic modifiers into generated routes.
@@ -158,7 +160,7 @@ Architect & Lead Developer.**
 - Built interactive Tableau dashboards as decision-support tools and developed the project website
   from scratch (HTML/CSS, built with Cursor + Claude).
 - Migrated the platform from Weebly to WordPress and optimized digital presence, growing reach to
-  2,000+ views and 700+ unique visitors.
+  4,000+ views and 1,000+ unique visitors.
 
 ### Course Coordinator — ENGIN 270B, UC Berkeley (Summer 2025)
 - Managed operations for a graduate leadership course (Prof. Bulent Erbilgin) serving 100+ students
