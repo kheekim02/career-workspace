@@ -269,42 +269,54 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
-/* ---- Rec 1+2+3+5+6: full custom node renderer ---- */
-function drawNodeFull(node, ctx, scale) {
+const LINK_CURVE = 0.14;
+
+/* ---- Node color: drawn by force-graph's RELIABLE built-in renderer ----
+   The built-in circle is the guaranteed-visible base. All gloss/glow/glyph
+   decoration is layered on top in "after" mode (also reliable on this GPU).
+   We previously used a full custom "replace" renderer, which silently fails
+   to paint on some Chrome/GPU setups → black screen. */
+function nodeColor(node) {
   const vs = getNodeVisualState(node);
-  const baseR = nodeRadius(node) * vs.scale;
+  const [r, g, b] = hexRgb(vs.color);
+  return `rgba(${r},${g},${b},${vs.opacity})`;
+}
+
+/* ---- Rec 1+2+3+5+6: decoration drawn in "after" mode over the base circle ---- */
+function drawNodeDecor(node, ctx, scale) {
+  if (!useFullRenderer) {            // safe mode: just the label
+    const vsl = getNodeVisualState(node);
+    if (vsl.showLabel) drawLabelPill(node, ctx, scale, nodeRadius(node), vsl);
+    return;
+  }
+  const vs = getNodeVisualState(node);
   const pulseMul = vs.pulse ? 1 + Math.sin(effectsTime * 2.1) * 0.06 : 1;
-  const R = baseR * pulseMul;
+  const R = nodeRadius(node) * pulseMul;
   const { x, y } = node;
   const [cr, cg, cb] = hexRgb(vs.color);
 
   ctx.save();
-  ctx.globalAlpha = vs.opacity;
 
-  // Rec 1 — outer glow halo (degree-scaled)
+  // Rec 1 — outer glow halo, tucked BEHIND existing pixels (incl. base circle)
+  ctx.globalCompositeOperation = "destination-over";
+  ctx.globalAlpha = vs.opacity;
   ctx.beginPath();
-  ctx.arc(x, y, R * 1.75, 0, Math.PI * 2);
+  ctx.arc(x, y, R * 1.9, 0, Math.PI * 2);
   ctx.fillStyle = `rgba(${cr},${cg},${cb},${vs.glowIntensity})`;
   ctx.fill();
 
-  // Rec 3 — degree ring
-  const ringW = (1.2 + (DEGREE[node.id] || 1) * 0.3) / scale;
-  ctx.beginPath();
-  ctx.arc(x, y, R + 3.5 / scale, 0, Math.PI * 2);
-  ctx.strokeStyle = vs.ringBoost
-    ? vs.color
-    : `rgba(${cr},${cg},${cb},0.38)`;
-  ctx.lineWidth = ringW;
-  ctx.stroke();
+  // Back to normal compositing for everything drawn on top of the base circle
+  ctx.globalCompositeOperation = "source-over";
+  ctx.globalAlpha = vs.opacity;
 
-  // Rec 1 — glossy sphere (radial gradient)
+  // Rec 1 — glossy sphere overlay (covers the flat built-in circle exactly)
   const grad = ctx.createRadialGradient(
     x - R * 0.32, y - R * 0.32, R * 0.08,
     x, y, R
   );
-  grad.addColorStop(0, lightenHex(vs.color, 55));
+  grad.addColorStop(0, lightenHex(vs.color, 60));
   grad.addColorStop(0.55, vs.color);
-  grad.addColorStop(1, darkenHex(vs.color, 35));
+  grad.addColorStop(1, darkenHex(vs.color, 38));
   ctx.beginPath();
   ctx.arc(x, y, R, 0, Math.PI * 2);
   ctx.fillStyle = grad;
@@ -313,8 +325,16 @@ function drawNodeFull(node, ctx, scale) {
   // Specular highlight
   ctx.beginPath();
   ctx.arc(x - R * 0.28, y - R * 0.32, R * 0.22, 0, Math.PI * 2);
-  ctx.fillStyle = "rgba(255,255,255,0.22)";
+  ctx.fillStyle = "rgba(255,255,255,0.24)";
   ctx.fill();
+
+  // Rec 3 — degree ring
+  const ringW = (1.2 + (DEGREE[node.id] || 1) * 0.3) / scale;
+  ctx.beginPath();
+  ctx.arc(x, y, R + 3 / scale, 0, Math.PI * 2);
+  ctx.strokeStyle = vs.ringBoost ? vs.color : `rgba(${cr},${cg},${cb},0.42)`;
+  ctx.lineWidth = ringW;
+  ctx.stroke();
 
   // Rec 2 — type glyph
   const glyph = NODE_GLYPHS[node.id] || GROUP_GLYPHS[node.group] || "";
@@ -324,7 +344,7 @@ function drawNodeFull(node, ctx, scale) {
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillStyle = vs.opacity > 0.4 ? "rgba(10,14,20,0.88)" : "rgba(230,237,243,0.25)";
-    ctx.fillText(glyph, x, y + (glyph.length > 2 ? 0 : 0.5 / scale));
+    ctx.fillText(glyph, x, y);
   }
 
   // Rec 6 — smart label pill
@@ -333,55 +353,54 @@ function drawNodeFull(node, ctx, scale) {
   ctx.restore();
 }
 
-/* ---- Rec 4: curved gradient links + relationship labels ---- */
-const LINK_CURVE = 0.14;
+/* ---- Rec 4: curved gradient links via built-in curvature + custom paint ----
+   Built-in renderer draws nothing (transparent); we paint the curved gradient
+   stroke + relationship label in "after" mode, matching force-graph's own
+   quadratic control point so the curve aligns with particle flow. */
+function linkColorTransparent() { return "rgba(0,0,0,0)"; }
 
-function linkCurvePoint(link) {
+function drawLinkDecor(link, ctx, scale) {
+  if (!isLinkVisible(link)) return;
   const s = link.source, t = link.target;
+  if (s.x == null || t.x == null) return;
+  const highlighted = highlightLinks.has(link);
+  const cinematic = highlightNodes.size > 0 || focusNode != null;
+
+  // Match force-graph's built-in curvature control point
   const mx = (s.x + t.x) / 2, my = (s.y + t.y) / 2;
   const dx = t.x - s.x, dy = t.y - s.y;
   const dist = Math.hypot(dx, dy) || 1;
-  const ox = (-dy / dist) * dist * LINK_CURVE;
-  const oy = (dx / dist) * dist * LINK_CURVE;
-  return { sx: s.x, sy: s.y, tx: t.x, ty: t.y, cpx: mx + ox, cpy: my + oy };
-}
-
-function drawLinkCustom(link, ctx, scale) {
-  if (!isLinkVisible(link)) return;
-  const highlighted = highlightLinks.has(link);
-  const cinematic = highlightNodes.size > 0 || focusNode != null;
-  const { sx, sy, tx, ty, cpx, cpy } = linkCurvePoint(link);
-  const sc = COLORS[link.source.group] || "#7887a0";
-  const tc = COLORS[link.target.group] || "#7887a0";
+  const cpx = mx + (dy) * LINK_CURVE * (dist / dist);
+  const cpy = my - (dx) * LINK_CURVE * (dist / dist);
+  const sc = COLORS[s.group] || "#7887a0";
+  const tc = COLORS[t.group] || "#7887a0";
 
   ctx.save();
   ctx.beginPath();
-  ctx.moveTo(sx, sy);
-  ctx.quadraticCurveTo(cpx, cpy, tx, ty);
-
+  ctx.moveTo(s.x, s.y);
+  ctx.quadraticCurveTo(cpx, cpy, t.x, t.y);
   if (highlighted) {
-    const grad = ctx.createLinearGradient(sx, sy, tx, ty);
+    const grad = ctx.createLinearGradient(s.x, s.y, t.x, t.y);
     grad.addColorStop(0, sc);
     grad.addColorStop(1, tc);
     ctx.strokeStyle = grad;
     ctx.lineWidth = 2.4 / scale;
-    ctx.globalAlpha = 0.85;
+    ctx.globalAlpha = 0.9;
   } else {
-    ctx.strokeStyle = cinematic ? "rgba(120,135,160,0.12)" : "rgba(120,135,160,0.38)";
+    ctx.strokeStyle = cinematic ? "rgba(120,135,160,0.12)" : "rgba(120,135,160,0.4)";
     ctx.lineWidth = 1 / scale;
-    ctx.globalAlpha = 1;
   }
   ctx.stroke();
 
-  // Relationship label on highlighted links
   if (highlighted && link.rel) {
-    const lx = 0.25 * sx + 0.5 * cpx + 0.25 * tx;
-    const ly = 0.25 * sy + 0.5 * cpy + 0.25 * ty;
+    const lx = 0.25 * s.x + 0.5 * cpx + 0.25 * t.x;
+    const ly = 0.25 * s.y + 0.5 * cpy + 0.25 * t.y;
     const fs = Math.max(8 / scale, 3);
+    ctx.globalAlpha = 1;
     ctx.font = `500 ${fs}px "JetBrains Mono", ui-monospace, monospace`;
     const tw = ctx.measureText(link.rel).width;
     const pad = 3 / scale;
-    ctx.fillStyle = "rgba(10,14,20,0.82)";
+    ctx.fillStyle = "rgba(10,14,20,0.85)";
     roundRect(ctx, lx - tw / 2 - pad, ly - fs / 2 - pad, tw + pad * 2, fs + pad * 2, 3 / scale);
     ctx.fill();
     ctx.fillStyle = "#5eead4";
@@ -392,50 +411,18 @@ function drawLinkCustom(link, ctx, scale) {
   ctx.restore();
 }
 
-/* ---- Fallback renderer (safe mode if full renderer fails probe) ---- */
-function nodeColor(node) {
-  const vs = getNodeVisualState(node);
-  const [r, g, b] = hexRgb(vs.color);
-  const a = Math.round(vs.opacity * 255).toString(16).padStart(2, "0");
-  return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}${a}`;
-}
-
-function drawLabelFallback(node, ctx, scale) {
-  const vs = getNodeVisualState(node);
-  if (!vs.showLabel) return;
-  drawLabelPill(node, ctx, scale, nodeRadius(node) * vs.scale, vs);
-}
-
 function applyRendererMode() {
   if (!Graph) return;
-  Graph.linkCanvasObject(drawLinkCustom).linkCanvasObjectMode(() => "replace");
-  if (useFullRenderer) {
-    Graph.nodeColor(() => "rgba(0,0,0,0)")
-      .nodeCanvasObject(drawNodeFull)
-      .nodeCanvasObjectMode(() => "replace");
-  } else {
-    Graph.nodeColor(nodeColor)
-      .nodeCanvasObject(drawLabelFallback)
-      .nodeCanvasObjectMode(() => "after");
-  }
-}
-
-function probeRenderer() {
-  /* Opt-in diagnostic only — canvas pixel reads are unreliable across
-     browsers/GPUs and caused false-positive fallback. Use ?renderer=safe
-     to force the built-in circle renderer. */
-  if (!/[?&]probe=1/.test(location.search) || !Graph || !useFullRenderer) return;
-  try {
-    const me = graphData.nodes.find(n => n.id === "me");
-    if (!me || me.x == null) return;
-    const cvs = canvasEl.querySelector("canvas");
-    const ctx = cvs && cvs.getContext("2d");
-    if (!ctx) return;
-    const sc = Graph.graph2ScreenCoords(me.x, me.y);
-    const dpr = window.devicePixelRatio || 1;
-    const d = ctx.getImageData(Math.floor(sc.x * dpr), Math.floor(sc.y * dpr), 1, 1).data;
-    console.info("[graph probe] me pixel:", d[0], d[1], d[2], d[3]);
-  } catch (e) { console.info("[graph probe] skipped:", e.message); }
+  // Nodes: reliable built-in circle base + decoration on top ("after").
+  Graph.nodeColor(nodeColor)
+    .nodeCanvasObject(drawNodeDecor)
+    .nodeCanvasObjectMode(() => "after");
+  // Links: built-in curvature for particle alignment; we paint the visuals.
+  Graph.linkCurvature(LINK_CURVE)
+    .linkColor(linkColorTransparent)
+    .linkWidth(() => 0)
+    .linkCanvasObject(drawLinkDecor)
+    .linkCanvasObjectMode(() => "after");
 }
 
 /* ---------- 4. Cluster forces (initial organic layout only) ---------- */
@@ -564,7 +551,7 @@ function initGraph() {
         setFocusVignette(!!focusNode);
       }
       if (Graph) {
-        Graph.nodeColor(useFullRenderer ? () => "rgba(0,0,0,0)" : nodeColor);
+        Graph.nodeColor(nodeColor);
         Graph.linkDirectionalParticles(particleCount);
       }
     })
@@ -578,6 +565,11 @@ function initGraph() {
     });
 
   applyRendererMode();
+  // Keep the canvas repainting every frame. force-graph defaults
+  // autoPauseRedraw=true, which halts drawing once the engine cools — that
+  // froze/blanked the graph and stopped our per-frame pulse + cinematic
+  // transitions. Continuous redraw is required for those effects.
+  if (Graph.autoPauseRedraw) Graph.autoPauseRedraw(false);
   Graph.resumeAnimation();
 
   Graph.d3Force("charge").strength(-280);
@@ -596,7 +588,6 @@ function initGraph() {
   setTimeout(() => {
     if (Graph && !focusNode) baseZoom = Graph.zoom();
     captureHome();
-    probeRenderer();
   }, 2200);
   if (/[?&]debug=1/.test(location.search)) {
     window.__G = Graph;
@@ -717,9 +708,7 @@ document.getElementById("graph-reset").addEventListener("click", () => {
   highlightLinks.clear();
   setFocusVignette(false);
   unfocus();
-  if (Graph) {
-    Graph.nodeColor(useFullRenderer ? () => "rgba(0,0,0,0)" : nodeColor);
-  }
+  if (Graph) Graph.nodeColor(nodeColor);
 });
 
 /* ---------- 10. i18n ---------- */
