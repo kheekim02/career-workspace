@@ -1,3 +1,6 @@
 *.pdf
 .DS_Store
 __pycache__/
+resume/preview.png
+resume/page1.png
+resume/pdf_check.png
