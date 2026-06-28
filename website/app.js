@@ -54,19 +54,30 @@ const NODES = [
   { id: "tableau",  group: "skill", label: "Tableau",    desc: "Interactive dashboards for research & decision support.", desc_ko: "리서치 및 의사결정 지원을 위한 인터랙티브 대시보드.", meta: ["Dashboards"] },
 ];
 
-const LINKS = [
-  ["me","gka"], ["me","berkeley"], ["me","alpha"], ["me","pathwise"], ["me","fnf"],
-  ["gka","alpha"], ["berkeley","fnf"], ["berkeley","pathwise"],
-  ["alpha","python"], ["alpha","postgres"], ["alpha","neo4j"], ["alpha","ml"], ["alpha","spark"], ["alpha","infra"],
-  ["pathwise","swift"], ["pathwise","python"], ["pathwise","postgres"], ["pathwise","infra"],
-  ["fnf","tableau"], ["fnf","sql"], ["fnf","ml"],
-  ["me","python"], ["me","sql"],
+const LINK_DEFS = [
+  ["me","gka","works at"], ["me","berkeley","studied at"],
+  ["me","alpha","built"], ["me","pathwise","built"], ["me","fnf","researched"],
+  ["gka","alpha","powers"], ["berkeley","fnf","hosts"], ["berkeley","pathwise","incubated"],
+  ["alpha","python","uses"], ["alpha","postgres","uses"], ["alpha","neo4j","uses"],
+  ["alpha","ml","uses"], ["alpha","spark","uses"], ["alpha","infra","uses"],
+  ["pathwise","swift","uses"], ["pathwise","python","uses"], ["pathwise","postgres","uses"], ["pathwise","infra","uses"],
+  ["fnf","tableau","uses"], ["fnf","sql","uses"], ["fnf","ml","uses"],
+  ["me","python","skills"], ["me","sql","skills"],
 ];
+
+/* Per-node glyph drawn inside the sphere (Rec 2) */
+const NODE_GLYPHS = {
+  me: "◎", gka: "⌂", berkeley: "▣",
+  alpha: "◈", pathwise: "◉", fnf: "◆",
+  python: "Py", sql: "SQL", postgres: "PG", neo4j: "N4",
+  spark: "Sp", ml: "ML", infra: "Dev", swift: "Sw", tableau: "Tb",
+};
+const GROUP_GLYPHS = { person: "◎", org: "◇", project: "◈", skill: "◆" };
 
 /* ---------- 2. Degree + state ---------- */
 const DEGREE = {};
 NODES.forEach(n => { DEGREE[n.id] = 0; });
-LINKS.forEach(([s, t]) => { DEGREE[s]++; DEGREE[t]++; });
+LINK_DEFS.forEach(([s, t]) => { DEGREE[s]++; DEGREE[t]++; });
 
 function nodeSize(node) {
   const d = DEGREE[node.id] || 1;
@@ -77,17 +88,26 @@ function nodeSize(node) {
 // Single persistent dataset — nodes keep their positions across filtering.
 const graphData = {
   nodes: NODES.map(n => ({ ...n, val: nodeSize(n), degree: DEGREE[n.id] })),
-  links: LINKS.map(([source, target]) => ({ source, target })),
+  links: LINK_DEFS.map(([source, target, rel]) => ({ source, target, rel })),
 };
 
 const canvasEl = document.getElementById("graph-canvas");
+const viewportEl = document.getElementById("graph-viewport");
+const bgCanvas = document.getElementById("graph-bg");
 let Graph = null;
 let hoverNode = null;
 let highlightNodes = new Set();
 let highlightLinks = new Set();
 let activeGroups = new Set(["person", "org", "project", "skill"]);
 let baseZoom = 1;
-let focusNode = null;     // node clicked to bring to center
+let focusNode = null;
+
+/* ---- Shared render state (Phases 0–7) ---- */
+let effectsTime = 0;
+let effectsRaf = null;
+let useFullRenderer = !/[?&]renderer=safe/.test(location.search);
+let bgParticles = [];
+const BG_PARTICLE_COUNT = 28;
 
 /* ---------- 3. Visibility-based filtering helpers ---------- */
 function isNodeVisible(node) {
@@ -115,12 +135,307 @@ function particleCount(link) {
   if (!isLinkVisible(link)) return 0;
   return highlightLinks.has(link) ? 5 : 1;
 }
-function linkColor(link) {
-  if (!isLinkVisible(link)) return "rgba(0,0,0,0)";
-  return highlightLinks.has(link) ? "rgba(94,234,212,0.75)" : "rgba(120,135,160,0.45)";
+
+/* ---- Color helpers ---- */
+function hexRgb(hex) {
+  const h = hex.replace("#", "");
+  return [
+    parseInt(h.slice(0, 2), 16),
+    parseInt(h.slice(2, 4), 16),
+    parseInt(h.slice(4, 6), 16),
+  ];
 }
-function linkWidth(link) {
-  return highlightLinks.has(link) ? 2.5 : 1;
+function lightenHex(hex, amt) {
+  const [r, g, b] = hexRgb(hex);
+  return `rgb(${Math.min(255, r + amt)},${Math.min(255, g + amt)},${Math.min(255, b + amt)})`;
+}
+function darkenHex(hex, amt) {
+  const [r, g, b] = hexRgb(hex);
+  return `rgb(${Math.max(0, r - amt)},${Math.max(0, g - amt)},${Math.max(0, b - amt)})`;
+}
+
+/* ---- Central visual state (Rec 5 + shared by all draw passes) ---- */
+function getNodeVisualState(node) {
+  const inSubgraph = highlightNodes.size === 0 || highlightNodes.has(node.id);
+  const cinematic = highlightNodes.size > 0 || focusNode != null;
+  const dim = highlightNodes.size > 0 && !highlightNodes.has(node.id);
+  const opacity = dim ? (cinematic ? 0.10 : 0.28) : 1;
+  const scale = dim && cinematic ? 0.82 : 1;
+  const isFocusCenter = focusNode && focusNode.id === node.id;
+  const isHub = node.id === "me";
+  const pulse = isHub || isFocusCenter;
+  const glowIntensity = 0.10 + Math.min((DEGREE[node.id] || 1) * 0.035, 0.22);
+  const zoom = Graph && Graph.zoom ? Graph.zoom() : 1;
+  const showLabel = isHub || inSubgraph || zoom > 1.85;
+  return {
+    opacity, scale, pulse, glowIntensity, showLabel,
+    color: COLORS[node.group] || "#888",
+    ringBoost: isFocusCenter || isHub,
+  };
+}
+
+function setFocusVignette(on) {
+  if (viewportEl) viewportEl.classList.toggle("is-focused", !!on);
+}
+
+/* ---- Rec 7: ambient background particles ---- */
+function initBgParticles(w, h) {
+  bgParticles = Array.from({ length: BG_PARTICLE_COUNT }, () => ({
+    x: Math.random() * w,
+    y: Math.random() * h,
+    r: 0.4 + Math.random() * 1.2,
+    vx: (Math.random() - 0.5) * 0.18,
+    vy: (Math.random() - 0.5) * 0.18,
+    a: 0.08 + Math.random() * 0.18,
+  }));
+}
+
+function drawBgParticles() {
+  if (!bgCanvas) return;
+  const w = bgCanvas.clientWidth || canvasEl.clientWidth;
+  const h = bgCanvas.clientHeight || canvasEl.clientHeight;
+  if (w < 2 || h < 2) return;
+  const dpr = window.devicePixelRatio || 1;
+  if (bgCanvas.width !== Math.round(w * dpr)) {
+    bgCanvas.width = Math.round(w * dpr);
+    bgCanvas.height = Math.round(h * dpr);
+    if (bgParticles.length === 0) initBgParticles(w, h);
+  }
+  const ctx = bgCanvas.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  bgParticles.forEach(p => {
+    p.x = (p.x + p.vx + w) % w;
+    p.y = (p.y + p.vy + h) % h;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(94,234,212,${p.a})`;
+    ctx.fill();
+  });
+}
+
+function startEffectsLoop() {
+  if (effectsRaf) return;
+  function tick(now) {
+    effectsTime = now / 1000;
+    drawBgParticles();
+    effectsRaf = requestAnimationFrame(tick);
+  }
+  effectsRaf = requestAnimationFrame(tick);
+}
+
+/* ---- Node radius (shared) ---- */
+function nodeRadius(node) {
+  return Math.sqrt(Math.max(node.val, 1)) * 4;
+}
+
+/* ---- Rec 6: label pill ---- */
+function drawLabelPill(node, ctx, scale, r, vs) {
+  const fontSize = Math.max(10 / scale, 3.5);
+  const fontWeight = node.id === "me" ? 700 : 500;
+  ctx.font = `${fontWeight} ${fontSize}px Inter, Arial, sans-serif`;
+  const text = node.label;
+  const tw = ctx.measureText(text).width;
+  const padX = 5 / scale;
+  const padY = 2 / scale;
+  const pillW = tw + padX * 2;
+  const pillH = fontSize + padY * 2;
+  const px = node.x - pillW / 2;
+  const py = node.y + r + 4 / scale;
+  const [cr, cg, cb] = hexRgb(vs.color);
+  ctx.fillStyle = `rgba(10,14,20,${0.78 * vs.opacity})`;
+  roundRect(ctx, px, py, pillW, pillH, 4 / scale);
+  ctx.fill();
+  ctx.strokeStyle = `rgba(${cr},${cg},${cb},${0.45 * vs.opacity})`;
+  ctx.lineWidth = 0.8 / scale;
+  ctx.stroke();
+  ctx.fillStyle = `rgba(230,237,243,${0.92 * vs.opacity})`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(text, node.x, py + pillH / 2);
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+/* ---- Rec 1+2+3+5+6: full custom node renderer ---- */
+function drawNodeFull(node, ctx, scale) {
+  const vs = getNodeVisualState(node);
+  const baseR = nodeRadius(node) * vs.scale;
+  const pulseMul = vs.pulse ? 1 + Math.sin(effectsTime * 2.1) * 0.06 : 1;
+  const R = baseR * pulseMul;
+  const { x, y } = node;
+  const [cr, cg, cb] = hexRgb(vs.color);
+
+  ctx.save();
+  ctx.globalAlpha = vs.opacity;
+
+  // Rec 1 — outer glow halo (degree-scaled)
+  ctx.beginPath();
+  ctx.arc(x, y, R * 1.75, 0, Math.PI * 2);
+  ctx.fillStyle = `rgba(${cr},${cg},${cb},${vs.glowIntensity})`;
+  ctx.fill();
+
+  // Rec 3 — degree ring
+  const ringW = (1.2 + (DEGREE[node.id] || 1) * 0.3) / scale;
+  ctx.beginPath();
+  ctx.arc(x, y, R + 3.5 / scale, 0, Math.PI * 2);
+  ctx.strokeStyle = vs.ringBoost
+    ? vs.color
+    : `rgba(${cr},${cg},${cb},0.38)`;
+  ctx.lineWidth = ringW;
+  ctx.stroke();
+
+  // Rec 1 — glossy sphere (radial gradient)
+  const grad = ctx.createRadialGradient(
+    x - R * 0.32, y - R * 0.32, R * 0.08,
+    x, y, R
+  );
+  grad.addColorStop(0, lightenHex(vs.color, 55));
+  grad.addColorStop(0.55, vs.color);
+  grad.addColorStop(1, darkenHex(vs.color, 35));
+  ctx.beginPath();
+  ctx.arc(x, y, R, 0, Math.PI * 2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Specular highlight
+  ctx.beginPath();
+  ctx.arc(x - R * 0.28, y - R * 0.32, R * 0.22, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(255,255,255,0.22)";
+  ctx.fill();
+
+  // Rec 2 — type glyph
+  const glyph = NODE_GLYPHS[node.id] || GROUP_GLYPHS[node.group] || "";
+  if (glyph) {
+    const gSize = Math.max(R * (glyph.length > 2 ? 0.38 : 0.52), 4 / scale);
+    ctx.font = `700 ${gSize}px "JetBrains Mono", ui-monospace, monospace`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = vs.opacity > 0.4 ? "rgba(10,14,20,0.88)" : "rgba(230,237,243,0.25)";
+    ctx.fillText(glyph, x, y + (glyph.length > 2 ? 0 : 0.5 / scale));
+  }
+
+  // Rec 6 — smart label pill
+  if (vs.showLabel) drawLabelPill(node, ctx, scale, R, vs);
+
+  ctx.restore();
+}
+
+/* ---- Rec 4: curved gradient links + relationship labels ---- */
+const LINK_CURVE = 0.14;
+
+function linkCurvePoint(link) {
+  const s = link.source, t = link.target;
+  const mx = (s.x + t.x) / 2, my = (s.y + t.y) / 2;
+  const dx = t.x - s.x, dy = t.y - s.y;
+  const dist = Math.hypot(dx, dy) || 1;
+  const ox = (-dy / dist) * dist * LINK_CURVE;
+  const oy = (dx / dist) * dist * LINK_CURVE;
+  return { sx: s.x, sy: s.y, tx: t.x, ty: t.y, cpx: mx + ox, cpy: my + oy };
+}
+
+function drawLinkCustom(link, ctx, scale) {
+  if (!isLinkVisible(link)) return;
+  const highlighted = highlightLinks.has(link);
+  const cinematic = highlightNodes.size > 0 || focusNode != null;
+  const { sx, sy, tx, ty, cpx, cpy } = linkCurvePoint(link);
+  const sc = COLORS[link.source.group] || "#7887a0";
+  const tc = COLORS[link.target.group] || "#7887a0";
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(sx, sy);
+  ctx.quadraticCurveTo(cpx, cpy, tx, ty);
+
+  if (highlighted) {
+    const grad = ctx.createLinearGradient(sx, sy, tx, ty);
+    grad.addColorStop(0, sc);
+    grad.addColorStop(1, tc);
+    ctx.strokeStyle = grad;
+    ctx.lineWidth = 2.4 / scale;
+    ctx.globalAlpha = 0.85;
+  } else {
+    ctx.strokeStyle = cinematic ? "rgba(120,135,160,0.12)" : "rgba(120,135,160,0.38)";
+    ctx.lineWidth = 1 / scale;
+    ctx.globalAlpha = 1;
+  }
+  ctx.stroke();
+
+  // Relationship label on highlighted links
+  if (highlighted && link.rel) {
+    const lx = 0.25 * sx + 0.5 * cpx + 0.25 * tx;
+    const ly = 0.25 * sy + 0.5 * cpy + 0.25 * ty;
+    const fs = Math.max(8 / scale, 3);
+    ctx.font = `500 ${fs}px "JetBrains Mono", ui-monospace, monospace`;
+    const tw = ctx.measureText(link.rel).width;
+    const pad = 3 / scale;
+    ctx.fillStyle = "rgba(10,14,20,0.82)";
+    roundRect(ctx, lx - tw / 2 - pad, ly - fs / 2 - pad, tw + pad * 2, fs + pad * 2, 3 / scale);
+    ctx.fill();
+    ctx.fillStyle = "#5eead4";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(link.rel, lx, ly);
+  }
+  ctx.restore();
+}
+
+/* ---- Fallback renderer (safe mode if full renderer fails probe) ---- */
+function nodeColor(node) {
+  const vs = getNodeVisualState(node);
+  const [r, g, b] = hexRgb(vs.color);
+  const a = Math.round(vs.opacity * 255).toString(16).padStart(2, "0");
+  return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}${a}`;
+}
+
+function drawLabelFallback(node, ctx, scale) {
+  const vs = getNodeVisualState(node);
+  if (!vs.showLabel) return;
+  drawLabelPill(node, ctx, scale, nodeRadius(node) * vs.scale, vs);
+}
+
+function applyRendererMode() {
+  if (!Graph) return;
+  Graph.linkCanvasObject(drawLinkCustom).linkCanvasObjectMode(() => "replace");
+  if (useFullRenderer) {
+    Graph.nodeColor(() => "rgba(0,0,0,0)")
+      .nodeCanvasObject(drawNodeFull)
+      .nodeCanvasObjectMode(() => "replace");
+  } else {
+    Graph.nodeColor(nodeColor)
+      .nodeCanvasObject(drawLabelFallback)
+      .nodeCanvasObjectMode(() => "after");
+  }
+}
+
+function probeRenderer() {
+  /* Opt-in diagnostic only — canvas pixel reads are unreliable across
+     browsers/GPUs and caused false-positive fallback. Use ?renderer=safe
+     to force the built-in circle renderer. */
+  if (!/[?&]probe=1/.test(location.search) || !Graph || !useFullRenderer) return;
+  try {
+    const me = graphData.nodes.find(n => n.id === "me");
+    if (!me || me.x == null) return;
+    const cvs = canvasEl.querySelector("canvas");
+    const ctx = cvs && cvs.getContext("2d");
+    if (!ctx) return;
+    const sc = Graph.graph2ScreenCoords(me.x, me.y);
+    const dpr = window.devicePixelRatio || 1;
+    const d = ctx.getImageData(Math.floor(sc.x * dpr), Math.floor(sc.y * dpr), 1, 1).data;
+    console.info("[graph probe] me pixel:", d[0], d[1], d[2], d[3]);
+  } catch (e) { console.info("[graph probe] skipped:", e.message); }
 }
 
 /* ---------- 4. Cluster forces (initial organic layout only) ---------- */
@@ -170,10 +485,11 @@ function buildRadialTargets(focus) {
 
 function focusOnNode(node) {
   if (!Graph) return;
-  if (homePos.size === 0) captureHome();   // safety if clicked before settle
+  if (homePos.size === 0) captureHome();
   if (focusNode === node) { unfocus(); return; }
   focusNode = node;
   layoutTargets = buildRadialTargets(node);
+  setFocusVignette(true);
   startLayoutLoop();
 }
 
@@ -183,6 +499,7 @@ function unfocus() {
   const t = new Map();
   homePos.forEach((p, id) => t.set(id, { x: p.x, y: p.y }));
   layoutTargets = t;
+  setFocusVignette(highlightNodes.size > 0);
   startLayoutLoop();
 }
 
@@ -215,47 +532,18 @@ function layoutTick() {
   }
 }
 
-/* ---------- 6. Node styling (built-in renderer — reliable across browsers) ---------- */
-function nodeColor(node) {
-  const dim = highlightNodes.size > 0 && !highlightNodes.has(node.id);
-  const c = COLORS[node.group] || "#888";
-  return dim ? c + "44" : c;
-}
-
-// Built-in node radius for the given value (nodeRelSize area model).
-function nodeRadius(node) {
-  return Math.sqrt(Math.max(node.val, 1)) * 4;
-}
-
-// Drawn in "after" mode: built-in renderer paints the circle, we add the label.
-function drawLabel(node, ctx, scale) {
-  const dim = highlightNodes.size > 0 && !highlightNodes.has(node.id);
-  const r = nodeRadius(node);
-  const fontSize = Math.max(11 / scale, 3.5);
-  ctx.font = `${node.id === "me" ? 700 : 500} ${fontSize}px Inter, Arial, sans-serif`;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "top";
-  ctx.fillStyle = dim ? "rgba(230,237,243,0.25)" : "#e6edf3";
-  ctx.fillText(node.label, node.x, node.y + r + 2 / scale);
-}
-
 /* ---------- 7. Init ---------- */
 function initGraph() {
   Graph = ForceGraph()(canvasEl)
     .graphData(graphData)
-    .backgroundColor("#0d141e")
+    .backgroundColor("rgba(0,0,0,0)")
     .nodeRelSize(4)
     .nodeVal("val")
-    .nodeColor(nodeColor)
     .nodeLabel(() => "")
-    .nodeCanvasObject(drawLabel)
-    .nodeCanvasObjectMode(() => "after")
     .nodeVisibility(isNodeVisible)
     .linkVisibility(isLinkVisible)
     .warmupTicks(80)
     .cooldownTime(3000)
-    .linkColor(linkColor)
-    .linkWidth(linkWidth)
     .linkDirectionalParticles(particleCount)
     .linkDirectionalParticleWidth(l => highlightLinks.has(l) ? 2.5 : 1.2)
     .linkDirectionalParticleSpeed(l => highlightLinks.has(l) ? 0.008 : 0.003)
@@ -269,12 +557,16 @@ function initGraph() {
         highlightLinks = ls;
         canvasEl.style.cursor = "pointer";
         hoverNode = node;
+        setFocusVignette(true);
       } else {
         canvasEl.style.cursor = "grab";
         hoverNode = null;
+        setFocusVignette(!!focusNode);
       }
-      Graph.nodeColor(nodeColor);
-      Graph.linkDirectionalParticles(particleCount);
+      if (Graph) {
+        Graph.nodeColor(useFullRenderer ? () => "rgba(0,0,0,0)" : nodeColor);
+        Graph.linkDirectionalParticles(particleCount);
+      }
     })
     .onNodeClick(node => {
       showPanel(node);
@@ -285,6 +577,9 @@ function initGraph() {
       unfocus();
     });
 
+  applyRendererMode();
+  Graph.resumeAnimation();
+
   Graph.d3Force("charge").strength(-280);
   Graph.d3Force("link").distance(l => {
     const sg = l.source.group || "";
@@ -294,14 +589,15 @@ function initGraph() {
   applyClusterForces(Graph);
 
   sizeGraph();
-  // Re-fit several times to survive late layout/font shifts that can leave
-  // the canvas mis-sized (and nodes off-screen) on first paint.
+  startEffectsLoop();
   [150, 500, 1000, 1800].forEach(t =>
     setTimeout(() => { sizeGraph(); if (Graph && !focusNode) Graph.zoomToFit(500, 70); }, t)
   );
   setTimeout(() => {
-    if (Graph && !focusNode) { baseZoom = Graph.zoom(); captureHome(); }
-  }, 2000);
+    if (Graph && !focusNode) baseZoom = Graph.zoom();
+    captureHome();
+    probeRenderer();
+  }, 2200);
   if (/[?&]debug=1/.test(location.search)) {
     window.__G = Graph;
     window.__focusOnNode = focusOnNode;
@@ -315,6 +611,7 @@ function sizeGraph() {
   const w = canvasEl.clientWidth || canvasEl.offsetWidth || 800;
   const h = canvasEl.clientHeight || canvasEl.offsetHeight || 600;
   Graph.width(w).height(h);
+  drawBgParticles();
   updateDebug();
 }
 window.addEventListener("resize", sizeGraph);
@@ -351,11 +648,9 @@ function updateDebug() {
 /* ---------- 8. Legend filters (visibility-based) ---------- */
 function refreshVisibility() {
   if (!Graph) return;
-  // Re-assigning the accessors forces force-graph to re-evaluate visibility.
   Graph.nodeVisibility(isNodeVisible);
   Graph.linkVisibility(isLinkVisible);
   Graph.linkDirectionalParticles(particleCount);
-  // If a node is focused, re-fit the rings to the now-visible set.
   if (focusNode) {
     if (isNodeVisible(focusNode)) {
       layoutTargets = buildRadialTargets(focusNode);
@@ -420,8 +715,11 @@ document.getElementById("graph-reset").addEventListener("click", () => {
   resetPanel();
   highlightNodes.clear();
   highlightLinks.clear();
+  setFocusVignette(false);
   unfocus();
-  if (Graph) Graph.nodeColor(nodeColor);
+  if (Graph) {
+    Graph.nodeColor(useFullRenderer ? () => "rgba(0,0,0,0)" : nodeColor);
+  }
 });
 
 /* ---------- 10. i18n ---------- */
