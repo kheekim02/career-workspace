@@ -22,7 +22,11 @@ infrastructure. Bilingual in English and Korean.
 **University of California, Berkeley** — B.A. Data Science
 *Graduated May 2026 · GPA 3.81 · Completed degree in 3 years*
 
-Served a 2-year mandatory military service (2022–2024) during studies.
+Served a 2-year mandatory military service in Korea (2022–2024), away from studies.
+
+**Certificates**
+- Berkeley Changemaker Certificate — UC Berkeley
+- Certificate in Entrepreneurship & Technology — Sutardja Center for Entrepreneurship and Technology (SCET), UC Berkeley
 
 ---
 
