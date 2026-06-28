@@ -23,24 +23,25 @@ guarantees, relational data modeling, and SQL performance tuning. Bilingual in E
 
 ## Projects
 
-### Alpha Signals — Quantitative SEC Event Research Pipeline (Global Key Advisors)
+### Alpha Signals — Quantitative SEC Event Research Pipeline | Jan 2026 – Present
 *Python, Polars, PostgreSQL, Neo4j, Ollama, Graph Neural Networks*
 
-- Flagship pipeline testing whether corporate events in SEC filings predict stock returns; built an autonomous daily loop (signals → simulated trades → GNN predictions by 04:30 PDT) over a Neo4j knowledge graph of discrete corporate events.
+- Flagship pipeline testing whether corporate events in SEC filings predict stock returns; built an autonomous daily loop (signal generation to simulated trades to GNN predictions by 04:30 PDT) over a Neo4j knowledge graph spanning 28,000+ entities.
 
-### PathWise — Intelligent iOS Running App (2026)
+### PathWise — Intelligent iOS Running App | Jan 2026 – May 2026
 *Swift (SwiftUI, MapKit, ActivityKit), FastAPI, PostgreSQL + PostGIS, GraphHopper, Docker*
 
 - Full-stack architect: built a pathfinding orchestrator integrating GraphHopper with PostGIS for real-time geofenced routing and a native iOS client with turn-by-turn voice navigation; achieved sub-2-second route generation. Presented at Berkeley's startup pitch competition.
 
 ## Technical Skills
 
-- **Languages:** Python, SQL, Swift, Bash/Shell
+- **Programming Languages:** Python, SQL, Swift, Bash/Shell
 - **Data Engineering:** ETL/ELT pipeline design, data lake & warehouse architecture, relational data modeling, schema design, idempotent ingestion, data quality & validation, deduplication, web scraping
 - **Databases & Big Data:** PostgreSQL (performance tuning, query optimization), Neo4j, Apache Spark (PySpark), PostGIS, SQLite
 - **Python & Backend:** Pandas, Polars, FastAPI, SQLAlchemy, Pydantic, concurrent.futures, BeautifulSoup, REST APIs
 - **ML / NLP:** Local LLM inference (Ollama), Graph Neural Networks (GNN), entity resolution, backtesting, event studies
-- **Tools & Workflow:** Docker, Linux, Git, cron/systemd orchestration, pg_dump/pg_restore, Tableau | **Spoken:** English & Korean (fluent)
+- **Tools & Workflow:** Docker, Linux, Git, cron/systemd orchestration, pg_dump/pg_restore, Tableau
+- **Languages (Spoken):** English (fluent), Korean (fluent)
 
 ## Education
 
