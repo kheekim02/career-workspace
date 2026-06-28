@@ -90,6 +90,10 @@ let userInteracting = false;
 let idleTimer = null;
 let motionRaf = null;
 let driftAngle = 0;
+let hoverCenter = null;   // transient: node under the cursor
+let centeredNode = null;  // sticky: node selected via click
+let camZoom = null;
+let baseZoom = 1;
 
 /* ---------- 3. Visibility-based filtering helpers ---------- */
 function isNodeVisible(node) {
@@ -125,18 +129,41 @@ function linkWidth(link) {
   return highlightLinks.has(link) ? 2.5 : 1;
 }
 
-/* ---------- 4. Idle motion (gentle pan drift) ---------- */
+/* ---------- 4. Camera loop (idle drift + hover-to-center) ----------
+   force-graph halts its own render loop after cooldown, which freezes any
+   animated centerAt(). So we run our own rAF and pan with instant
+   centerAt(...,0), easing toward a target each frame. */
 function markInteraction() {
   userInteracting = true;
   clearTimeout(idleTimer);
   idleTimer = setTimeout(() => { userInteracting = false; }, 4000);
 }
-function startIdleMotion() {
+function startCameraLoop() {
   if (motionRaf) cancelAnimationFrame(motionRaf);
   function tick() {
-    if (Graph && !userInteracting) {
-      driftAngle += 0.0016;
-      Graph.centerAt(Math.cos(driftAngle) * 14, Math.sin(driftAngle) * 10, 0);
+    if (Graph) {
+      const cur = Graph.centerAt();
+      const focus = hoverCenter || centeredNode;
+      let tx = cur.x, ty = cur.y;
+      if (focus) {
+        tx = focus.x;
+        ty = focus.y;
+      } else if (!userInteracting) {
+        driftAngle += 0.0016;
+        tx = Math.cos(driftAngle) * 14;
+        ty = Math.sin(driftAngle) * 10;
+      }
+      const nx = cur.x + (tx - cur.x) * 0.12;
+      const ny = cur.y + (ty - cur.y) * 0.12;
+      if (Math.abs(nx - cur.x) > 0.01 || Math.abs(ny - cur.y) > 0.01) {
+        Graph.centerAt(nx, ny, 0);
+      }
+      if (camZoom != null) {
+        const cz = Graph.zoom();
+        const nz = cz + (camZoom - cz) * 0.12;
+        if (Math.abs(nz - cz) > 0.002) Graph.zoom(nz, 0);
+        else { Graph.zoom(camZoom, 0); camZoom = null; }
+      }
     }
     motionRaf = requestAnimationFrame(tick);
   }
@@ -151,11 +178,40 @@ function applyClusterForces(g) {
   if (fy) { fy.strength(0.06).y(n => (GROUP_ANCHORS[n.group] || { y: 0 }).y); }
 }
 
+// The camera loop eases the view so the hovered node reaches the viewport
+// center; every other node slides accordingly.
+function centerOnNode(node) {
+  hoverCenter = node;
+}
+
+// On unhover, the camera loop eases back to the selected node (if any) or
+// the overall centered view.
+function releaseCenteredNode() {
+  hoverCenter = null;
+}
+
 /* ---------- 6. Node styling (built-in renderer — reliable across browsers) ---------- */
 function nodeColor(node) {
   const dim = highlightNodes.size > 0 && !highlightNodes.has(node.id);
   const c = COLORS[node.group] || "#888";
   return dim ? c + "44" : c;
+}
+
+// Built-in node radius for the given value (nodeRelSize area model).
+function nodeRadius(node) {
+  return Math.sqrt(Math.max(node.val, 1)) * 4;
+}
+
+// Drawn in "after" mode: built-in renderer paints the circle, we add the label.
+function drawLabel(node, ctx, scale) {
+  const dim = highlightNodes.size > 0 && !highlightNodes.has(node.id);
+  const r = nodeRadius(node);
+  const fontSize = Math.max(11 / scale, 3.5);
+  ctx.font = `${node.id === "me" ? 700 : 500} ${fontSize}px Inter, Arial, sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+  ctx.fillStyle = dim ? "rgba(230,237,243,0.25)" : "#e6edf3";
+  ctx.fillText(node.label, node.x, node.y + r + 2 / scale);
 }
 
 /* ---------- 7. Init ---------- */
@@ -166,7 +222,9 @@ function initGraph() {
     .nodeRelSize(4)
     .nodeVal("val")
     .nodeColor(nodeColor)
-    .nodeLabel(n => n.label)
+    .nodeLabel(() => "")
+    .nodeCanvasObject(drawLabel)
+    .nodeCanvasObjectMode(() => "after")
     .nodeVisibility(isNodeVisible)
     .linkVisibility(isLinkVisible)
     .warmupTicks(80)
@@ -177,7 +235,6 @@ function initGraph() {
     .linkDirectionalParticleWidth(l => highlightLinks.has(l) ? 2.5 : 1.2)
     .linkDirectionalParticleSpeed(l => highlightLinks.has(l) ? 0.008 : 0.003)
     .linkDirectionalParticleColor(l => highlightLinks.has(l) ? "#5eead4" : "rgba(94,234,212,0.35)")
-    .onZoom(markInteraction)
     .onNodeDrag(markInteraction)
     .onNodeHover(node => {
       highlightNodes.clear();
@@ -188,22 +245,25 @@ function initGraph() {
         highlightLinks = ls;
         canvasEl.style.cursor = "pointer";
         hoverNode = node;
+        centerOnNode(node);
       } else {
         canvasEl.style.cursor = "grab";
         hoverNode = null;
+        releaseCenteredNode();
       }
       Graph.nodeColor(nodeColor);
       Graph.linkDirectionalParticles(particleCount);
     })
     .onNodeClick(node => {
-      markInteraction();
       showPanel(node);
-      Graph.centerAt(node.x, node.y, 600);
-      Graph.zoom(2.3, 600);
+      centeredNode = node;
+      camZoom = Math.max(baseZoom * 1.6, 2.2);
     })
     .onBackgroundClick(() => {
-      markInteraction();
       resetPanel();
+      centeredNode = null;
+      camZoom = baseZoom;
+      userInteracting = false;
     });
 
   Graph.d3Force("charge").strength(-280);
@@ -220,7 +280,13 @@ function initGraph() {
   [150, 500, 1000, 1800].forEach(t =>
     setTimeout(() => { sizeGraph(); if (Graph) Graph.zoomToFit(500, 70); }, t)
   );
-  setTimeout(startIdleMotion, 2200);
+  setTimeout(() => { if (Graph) baseZoom = Graph.zoom(); }, 2000);
+  setTimeout(startCameraLoop, 2200);
+  if (/[?&]debug=1/.test(location.search)) {
+    window.__G = Graph;
+    window.__centerOnNode = centerOnNode;
+    window.__releaseCenteredNode = releaseCenteredNode;
+  }
   updateDebug();
 }
 
@@ -325,11 +391,13 @@ function resetPanel() {
 }
 
 document.getElementById("graph-reset").addEventListener("click", () => {
-  markInteraction();
   resetPanel();
   highlightNodes.clear();
   highlightLinks.clear();
-  Graph.zoomToFit(600, 70);
+  centeredNode = null;
+  camZoom = baseZoom;
+  userInteracting = false;
+  if (Graph) Graph.nodeColor(nodeColor);
 });
 
 /* ---------- 10. i18n ---------- */
