@@ -3,3 +3,10 @@ __pycache__/
 resume/preview.png
 resume/page1.png
 resume/pdf_check.png
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+.env*
+!.env.example
