@@ -5,10 +5,10 @@
 
 /* ---------- 1. Graph data model ---------- */
 const COLORS = {
-  person:  "#f4c542",
-  org:     "#7c9cff",
-  project: "#5eead4",
-  skill:   "#c084fc",
+  person:  "#c9a227",   /* muted gold */
+  org:     "#6889d4",   /* muted periwinkle */
+  project: "#45b5a8",   /* muted teal */
+  skill:   "#9a72c4",   /* muted violet */
 };
 
 const GROUP_ANCHORS = {
@@ -102,12 +102,8 @@ let activeGroups = new Set(["person", "org", "project", "skill"]);
 let baseZoom = 1;
 let focusNode = null;
 
-/* ---- Shared render state (Phases 0–7) ---- */
-let effectsTime = 0;
-let effectsRaf = null;
+/* ---- Shared render state ---- */
 let useFullRenderer = !/[?&]renderer=safe/.test(location.search);
-let bgParticles = [];
-const BG_PARTICLE_COUNT = 28;
 
 /* ---------- 3. Visibility-based filtering helpers ---------- */
 function isNodeVisible(node) {
@@ -133,7 +129,7 @@ function neighbors(node) {
 
 function particleCount(link) {
   if (!isLinkVisible(link)) return 0;
-  return highlightLinks.has(link) ? 5 : 1;
+  return highlightLinks.has(link) ? 4 : 0;
 }
 
 /* ---- Color helpers ---- */
@@ -145,32 +141,25 @@ function hexRgb(hex) {
     parseInt(h.slice(4, 6), 16),
   ];
 }
-function lightenHex(hex, amt) {
-  const [r, g, b] = hexRgb(hex);
-  return `rgb(${Math.min(255, r + amt)},${Math.min(255, g + amt)},${Math.min(255, b + amt)})`;
-}
-function darkenHex(hex, amt) {
-  const [r, g, b] = hexRgb(hex);
-  return `rgb(${Math.max(0, r - amt)},${Math.max(0, g - amt)},${Math.max(0, b - amt)})`;
-}
-
-/* ---- Central visual state (Rec 5 + shared by all draw passes) ---- */
+/* ---- Visual state: calm at rest, rich on hover / focus ---- */
 function getNodeVisualState(node) {
   const inSubgraph = highlightNodes.size === 0 || highlightNodes.has(node.id);
-  const cinematic = highlightNodes.size > 0 || focusNode != null;
+  const interacting = highlightNodes.size > 0 || focusNode != null;
   const dim = highlightNodes.size > 0 && !highlightNodes.has(node.id);
-  const opacity = dim ? (cinematic ? 0.10 : 0.28) : 1;
-  const scale = dim && cinematic ? 0.82 : 1;
   const isFocusCenter = focusNode && focusNode.id === node.id;
   const isHub = node.id === "me";
-  const pulse = isHub || isFocusCenter;
-  const glowIntensity = 0.10 + Math.min((DEGREE[node.id] || 1) * 0.035, 0.22);
-  const zoom = Graph && Graph.zoom ? Graph.zoom() : 1;
-  const showLabel = isHub || inSubgraph || zoom > 1.85;
+  const isHovered = hoverNode && hoverNode.id === node.id;
+
   return {
-    opacity, scale, pulse, glowIntensity, showLabel,
+    opacity: dim ? (interacting ? 0.14 : 1) : 1,
+    scale: dim && interacting ? 0.88 : 1,
+    showGlow: isHub || isFocusCenter || isHovered,
+    glowAlpha: isFocusCenter ? 0.16 : isHovered ? 0.12 : isHub ? 0.05 : 0,
+    showRing: isFocusCenter,
+    showGlyph: interacting && inSubgraph,
+    showLabel: isHub || (interacting && inSubgraph),
+    labelBright: isHub || isFocusCenter || isHovered,
     color: COLORS[node.group] || "#888",
-    ringBoost: isFocusCenter || isHub,
   };
 }
 
@@ -178,106 +167,29 @@ function setFocusVignette(on) {
   if (viewportEl) viewportEl.classList.toggle("is-focused", !!on);
 }
 
-/* ---- Rec 7: ambient background particles ---- */
-function initBgParticles(w, h) {
-  bgParticles = Array.from({ length: BG_PARTICLE_COUNT }, () => ({
-    x: Math.random() * w,
-    y: Math.random() * h,
-    r: 0.4 + Math.random() * 1.2,
-    vx: (Math.random() - 0.5) * 0.18,
-    vy: (Math.random() - 0.5) * 0.18,
-    a: 0.08 + Math.random() * 0.18,
-  }));
-}
-
-function drawBgParticles() {
-  if (!bgCanvas) return;
-  const w = bgCanvas.clientWidth || canvasEl.clientWidth;
-  const h = bgCanvas.clientHeight || canvasEl.clientHeight;
-  if (w < 2 || h < 2) return;
-  const dpr = window.devicePixelRatio || 1;
-  if (bgCanvas.width !== Math.round(w * dpr)) {
-    bgCanvas.width = Math.round(w * dpr);
-    bgCanvas.height = Math.round(h * dpr);
-    if (bgParticles.length === 0) initBgParticles(w, h);
-  }
-  const ctx = bgCanvas.getContext("2d");
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.clearRect(0, 0, w, h);
-  bgParticles.forEach(p => {
-    p.x = (p.x + p.vx + w) % w;
-    p.y = (p.y + p.vy + h) % h;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(94,234,212,${p.a})`;
-    ctx.fill();
-  });
-}
-
-function startEffectsLoop() {
-  if (effectsRaf) return;
-  function tick(now) {
-    effectsTime = now / 1000;
-    drawBgParticles();
-    effectsRaf = requestAnimationFrame(tick);
-  }
-  effectsRaf = requestAnimationFrame(tick);
-}
-
 /* ---- Node radius (shared) ---- */
 function nodeRadius(node) {
   return Math.sqrt(Math.max(node.val, 1)) * 4;
 }
 
-/* ---- Rec 6: label pill ---- */
-function drawLabelPill(node, ctx, scale, r, vs) {
+/* Plain text label — no pill box */
+function drawLabelPlain(node, ctx, scale, r, vs) {
   if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return;
   scale = safeScale(scale);
-  const fontSize = Math.max(10 / scale, 3.5);
-  const fontWeight = node.id === "me" ? 700 : 500;
+  const fontSize = Math.max(9 / scale, 3.2);
+  const fontWeight = node.id === "me" ? 600 : 400;
   ctx.font = `${fontWeight} ${fontSize}px Inter, Arial, sans-serif`;
-  const text = node.label;
-  const tw = ctx.measureText(text).width;
-  const padX = 5 / scale;
-  const padY = 2 / scale;
-  const pillW = tw + padX * 2;
-  const pillH = fontSize + padY * 2;
-  const px = node.x - pillW / 2;
-  const py = node.y + r + 4 / scale;
-  const [cr, cg, cb] = hexRgb(vs.color);
-  ctx.fillStyle = `rgba(10,14,20,${0.78 * vs.opacity})`;
-  roundRect(ctx, px, py, pillW, pillH, 4 / scale);
-  ctx.fill();
-  ctx.strokeStyle = `rgba(${cr},${cg},${cb},${0.45 * vs.opacity})`;
-  ctx.lineWidth = 0.8 / scale;
-  ctx.stroke();
-  ctx.fillStyle = `rgba(230,237,243,${0.92 * vs.opacity})`;
   ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText(text, node.x, py + pillH / 2);
+  ctx.textBaseline = "top";
+  ctx.fillStyle = vs.labelBright
+    ? `rgba(230,237,243,${0.9 * vs.opacity})`
+    : `rgba(180,190,205,${0.5 * vs.opacity})`;
+  ctx.fillText(node.label, node.x, node.y + r + 3 / scale);
 }
 
-function roundRect(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
-}
+const LINK_CURVE = 0.06;
 
-const LINK_CURVE = 0.14;
-
-/* ---- Node color: drawn by force-graph's RELIABLE built-in renderer ----
-   The built-in circle is the guaranteed-visible base. All gloss/glow/glyph
-   decoration is layered on top in "after" mode (also reliable on this GPU).
-   We previously used a full custom "replace" renderer, which silently fails
-   to paint on some Chrome/GPU setups → black screen. */
+/* Built-in circle = flat base color. "After" pass adds interaction-only polish. */
 function nodeColor(node) {
   const vs = getNodeVisualState(node);
   const [r, g, b] = hexRgb(vs.color);
@@ -288,88 +200,55 @@ function safeScale(scale) {
   return Number.isFinite(scale) && scale > 0 ? scale : 1;
 }
 
-/* ---- Rec 1+2+3+5+6: decoration drawn in "after" mode over the base circle ---- */
 function drawNodeDecor(node, ctx, scale) {
   scale = safeScale(scale);
-  if (!useFullRenderer) {
-    const vsl = getNodeVisualState(node);
-    if (vsl.showLabel) drawLabelPill(node, ctx, scale, nodeRadius(node), vsl);
-    return;
-  }
-  // Simulation may not have assigned x/y yet — drawing with NaN crashes
-  // createRadialGradient and kills the entire render loop (black screen).
   if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return;
 
   const vs = getNodeVisualState(node);
-  const pulseMul = vs.pulse ? 1 + Math.sin(effectsTime * 2.1) * 0.06 : 1;
-  const R = Math.max(nodeRadius(node) * pulseMul, 2);
-  if (!Number.isFinite(R)) return;
-  const x = node.x;
-  const y = node.y;
+  const R = Math.max(nodeRadius(node) * vs.scale, 2);
+  const { x, y } = node;
   const [cr, cg, cb] = hexRgb(vs.color);
 
   ctx.save();
-
-  // Rec 1 — outer glow halo, tucked BEHIND existing pixels (incl. base circle)
-  ctx.globalCompositeOperation = "destination-over";
-  ctx.globalAlpha = vs.opacity;
-  ctx.beginPath();
-  ctx.arc(x, y, R * 1.9, 0, Math.PI * 2);
-  ctx.fillStyle = `rgba(${cr},${cg},${cb},${vs.glowIntensity})`;
-  ctx.fill();
-
-  // Back to normal compositing for everything drawn on top of the base circle
-  ctx.globalCompositeOperation = "source-over";
   ctx.globalAlpha = vs.opacity;
 
-  // Rec 1 — glossy sphere overlay (covers the flat built-in circle exactly)
-  const grad = ctx.createRadialGradient(
-    x - R * 0.32, y - R * 0.32, Math.max(R * 0.08, 0.5),
-    x, y, R
-  );
-  grad.addColorStop(0, lightenHex(vs.color, 60));
-  grad.addColorStop(0.55, vs.color);
-  grad.addColorStop(1, darkenHex(vs.color, 38));
-  ctx.beginPath();
-  ctx.arc(x, y, R, 0, Math.PI * 2);
-  ctx.fillStyle = grad;
-  ctx.fill();
-
-  // Specular highlight
-  ctx.beginPath();
-  ctx.arc(x - R * 0.28, y - R * 0.32, R * 0.22, 0, Math.PI * 2);
-  ctx.fillStyle = "rgba(255,255,255,0.24)";
-  ctx.fill();
-
-  // Rec 3 — degree ring
-  const ringW = (1.2 + (DEGREE[node.id] || 1) * 0.3) / scale;
-  ctx.beginPath();
-  ctx.arc(x, y, R + 3 / scale, 0, Math.PI * 2);
-  ctx.strokeStyle = vs.ringBoost ? vs.color : `rgba(${cr},${cg},${cb},0.42)`;
-  ctx.lineWidth = ringW;
-  ctx.stroke();
-
-  // Rec 2 — type glyph
-  const glyph = NODE_GLYPHS[node.id] || GROUP_GLYPHS[node.group] || "";
-  if (glyph) {
-    const gSize = Math.max(R * (glyph.length > 2 ? 0.38 : 0.52), 4 / scale);
-    ctx.font = `700 ${gSize}px "JetBrains Mono", ui-monospace, monospace`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillStyle = vs.opacity > 0.4 ? "rgba(10,14,20,0.88)" : "rgba(230,237,243,0.25)";
-    ctx.fillText(glyph, x, y);
+  // Subtle glow — hub at rest, stronger on hover / focus only
+  if (useFullRenderer && vs.showGlow && vs.glowAlpha > 0) {
+    ctx.globalCompositeOperation = "destination-over";
+    ctx.beginPath();
+    ctx.arc(x, y, R * 1.55, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(${cr},${cg},${cb},${vs.glowAlpha})`;
+    ctx.fill();
+    ctx.globalCompositeOperation = "source-over";
   }
 
-  // Rec 6 — smart label pill
-  if (vs.showLabel) drawLabelPill(node, ctx, scale, R, vs);
+  // Selection ring — focused node only
+  if (useFullRenderer && vs.showRing) {
+    ctx.beginPath();
+    ctx.arc(x, y, R + 4 / scale, 0, Math.PI * 2);
+    ctx.strokeStyle = vs.color;
+    ctx.lineWidth = 1.5 / scale;
+    ctx.stroke();
+  }
+
+  // Glyph — visible in active subgraph only
+  if (useFullRenderer && vs.showGlyph) {
+    const glyph = NODE_GLYPHS[node.id] || GROUP_GLYPHS[node.group] || "";
+    if (glyph) {
+      const gSize = Math.max(R * (glyph.length > 2 ? 0.36 : 0.48), 4 / scale);
+      ctx.font = `600 ${gSize}px "JetBrains Mono", ui-monospace, monospace`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = "rgba(10,14,20,0.82)";
+      ctx.fillText(glyph, x, y);
+    }
+  }
+
+  if (vs.showLabel) drawLabelPlain(node, ctx, scale, R, vs);
 
   ctx.restore();
 }
 
-/* ---- Rec 4: curved gradient links via built-in curvature + custom paint ----
-   Built-in renderer draws nothing (transparent); we paint the curved gradient
-   stroke + relationship label in "after" mode, matching force-graph's own
-   quadratic control point so the curve aligns with particle flow. */
 function linkColorTransparent() { return "rgba(0,0,0,0)"; }
 
 function drawLinkDecor(link, ctx, scale) {
@@ -378,47 +257,33 @@ function drawLinkDecor(link, ctx, scale) {
   const s = link.source, t = link.target;
   if (!Number.isFinite(s.x) || !Number.isFinite(s.y) ||
       !Number.isFinite(t.x) || !Number.isFinite(t.y)) return;
-  const highlighted = highlightLinks.has(link);
-  const cinematic = highlightNodes.size > 0 || focusNode != null;
 
-  // Match force-graph's built-in curvature control point
+  const highlighted = highlightLinks.has(link);
+  const interacting = highlightNodes.size > 0 || focusNode != null;
   const mx = (s.x + t.x) / 2, my = (s.y + t.y) / 2;
   const dx = t.x - s.x, dy = t.y - s.y;
-  const dist = Math.hypot(dx, dy) || 1;
-  const cpx = mx + (dy) * LINK_CURVE * (dist / dist);
-  const cpy = my - (dx) * LINK_CURVE * (dist / dist);
-  const sc = COLORS[s.group] || "#7887a0";
-  const tc = COLORS[t.group] || "#7887a0";
+  const cpx = mx + dy * LINK_CURVE;
+  const cpy = my - dx * LINK_CURVE;
 
   ctx.save();
   ctx.beginPath();
   ctx.moveTo(s.x, s.y);
   ctx.quadraticCurveTo(cpx, cpy, t.x, t.y);
   if (highlighted) {
-    const grad = ctx.createLinearGradient(s.x, s.y, t.x, t.y);
-    grad.addColorStop(0, sc);
-    grad.addColorStop(1, tc);
-    ctx.strokeStyle = grad;
-    ctx.lineWidth = 2.4 / scale;
-    ctx.globalAlpha = 0.9;
+    ctx.strokeStyle = "rgba(94,234,212,0.75)";
+    ctx.lineWidth = 1.8 / scale;
   } else {
-    ctx.strokeStyle = cinematic ? "rgba(120,135,160,0.12)" : "rgba(120,135,160,0.4)";
-    ctx.lineWidth = 1 / scale;
+    ctx.strokeStyle = interacting ? "rgba(100,115,135,0.1)" : "rgba(100,115,135,0.28)";
+    ctx.lineWidth = 0.8 / scale;
   }
   ctx.stroke();
 
   if (highlighted && link.rel) {
     const lx = 0.25 * s.x + 0.5 * cpx + 0.25 * t.x;
     const ly = 0.25 * s.y + 0.5 * cpy + 0.25 * t.y;
-    const fs = Math.max(8 / scale, 3);
-    ctx.globalAlpha = 1;
-    ctx.font = `500 ${fs}px "JetBrains Mono", ui-monospace, monospace`;
-    const tw = ctx.measureText(link.rel).width;
-    const pad = 3 / scale;
-    ctx.fillStyle = "rgba(10,14,20,0.85)";
-    roundRect(ctx, lx - tw / 2 - pad, ly - fs / 2 - pad, tw + pad * 2, fs + pad * 2, 3 / scale);
-    ctx.fill();
-    ctx.fillStyle = "#5eead4";
+    const fs = Math.max(7.5 / scale, 3);
+    ctx.font = `400 ${fs}px "JetBrains Mono", ui-monospace, monospace`;
+    ctx.fillStyle = "rgba(94,234,212,0.8)";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(link.rel, lx, ly);
@@ -547,9 +412,9 @@ function initGraph() {
     .warmupTicks(80)
     .cooldownTime(3000)
     .linkDirectionalParticles(particleCount)
-    .linkDirectionalParticleWidth(l => highlightLinks.has(l) ? 2.5 : 1.2)
-    .linkDirectionalParticleSpeed(l => highlightLinks.has(l) ? 0.008 : 0.003)
-    .linkDirectionalParticleColor(l => highlightLinks.has(l) ? "#5eead4" : "rgba(94,234,212,0.35)")
+    .linkDirectionalParticleWidth(l => highlightLinks.has(l) ? 2 : 0)
+    .linkDirectionalParticleSpeed(l => highlightLinks.has(l) ? 0.006 : 0)
+    .linkDirectionalParticleColor(l => highlightLinks.has(l) ? "rgba(94,234,212,0.6)" : "rgba(0,0,0,0)")
     .onNodeHover(node => {
       highlightNodes.clear();
       highlightLinks.clear();
@@ -559,11 +424,9 @@ function initGraph() {
         highlightLinks = ls;
         canvasEl.style.cursor = "pointer";
         hoverNode = node;
-        setFocusVignette(true);
       } else {
         canvasEl.style.cursor = "grab";
         hoverNode = null;
-        setFocusVignette(!!focusNode);
       }
       if (Graph) {
         Graph.nodeColor(nodeColor);
@@ -580,10 +443,7 @@ function initGraph() {
     });
 
   applyRendererMode();
-  // Keep the canvas repainting every frame. force-graph defaults
-  // autoPauseRedraw=true, which halts drawing once the engine cools — that
-  // froze/blanked the graph and stopped our per-frame pulse + cinematic
-  // transitions. Continuous redraw is required for those effects.
+  // autoPauseRedraw=true halts drawing once the engine cools.
   if (Graph.autoPauseRedraw) Graph.autoPauseRedraw(false);
   Graph.resumeAnimation();
 
@@ -596,7 +456,6 @@ function initGraph() {
   applyClusterForces(Graph);
 
   sizeGraph();
-  startEffectsLoop();
   [150, 500, 1000, 1800].forEach(t =>
     setTimeout(() => { sizeGraph(); if (Graph && !focusNode) Graph.zoomToFit(500, 70); }, t)
   );
@@ -617,7 +476,6 @@ function sizeGraph() {
   const w = canvasEl.clientWidth || canvasEl.offsetWidth || 800;
   const h = canvasEl.clientHeight || canvasEl.offsetHeight || 600;
   Graph.width(w).height(h);
-  drawBgParticles();
   updateDebug();
 }
 window.addEventListener("resize", sizeGraph);
