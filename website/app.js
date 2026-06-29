@@ -128,13 +128,16 @@ function skillsPinned() { return activeGroups.has("skill"); }
 function byId(id) { return graphData.nodes.find(n => n.id === id); }
 function updateRevealedSkills() {
   revealedSkills.clear();
-  if (skillsPinned()) return;
-  const src = hoverNode || focusNode;
-  if (!src) return;
-  neighbors(src).ns.forEach(id => {
-    const n = byId(id);
-    if (n && n.group === "skill") revealedSkills.add(id);
-  });
+  if (!skillsPinned()) {
+    const src = hoverNode || focusNode;
+    if (src) {
+      neighbors(src).ns.forEach(id => {
+        const n = byId(id);
+        if (n && n.group === "skill") revealedSkills.add(id);
+      });
+    }
+  }
+  startRevealLoop();
 }
 
 /* ---- Shared render state ---- */
@@ -143,7 +146,10 @@ let useFullRenderer = !/[?&]renderer=safe/.test(location.search);
 /* ---------- 3. Visibility-based filtering helpers ---------- */
 function isNodeVisible(node) {
   if (activeGroups.has(node.group)) return true;
-  if (node.group === "skill" && revealedSkills.has(node.id)) return true;
+  if (node.group === "skill") {
+    // Visible while targeted OR still fading out (alpha not yet zero).
+    return revealedSkills.has(node.id) || (skillReveal.get(node.id) ?? 0) > 0.01;
+  }
   return false;
 }
 function isLinkVisible(link) {
@@ -178,6 +184,46 @@ function hexRgb(hex) {
     parseInt(h.slice(4, 6), 16),
   ];
 }
+function lightenHex(hex, amt) {
+  const [r, g, b] = hexRgb(hex);
+  const f = v => Math.round(v + (255 - v) * amt);
+  return `${f(r)},${f(g)},${f(b)}`;
+}
+
+/* ---- Reveal animation: skills fade + scale in/out smoothly ---- */
+const skillReveal = new Map();   // id -> animated alpha 0..1
+let revealRaf = null;
+function revealAlpha(node) {
+  if (node.group !== "skill") return 1;
+  return skillReveal.get(node.id) ?? 0;
+}
+function revealTarget(id) {
+  return (skillsPinned() || revealedSkills.has(id)) ? 1 : 0;
+}
+function startRevealLoop() {
+  if (!revealRaf) revealRaf = requestAnimationFrame(tickReveal);
+}
+function tickReveal() {
+  revealRaf = null;
+  let animating = false;
+  let visibilityChanged = false;
+  graphData.nodes.forEach(n => {
+    if (n.group !== "skill") return;
+    const tgt = revealTarget(n.id);
+    let cur = skillReveal.get(n.id) ?? 0;
+    const before = cur > 0.01;
+    const step = 0.14;
+    if (cur < tgt) cur = Math.min(tgt, cur + step);
+    else if (cur > tgt) cur = Math.max(tgt, cur - step);
+    skillReveal.set(n.id, cur);
+    if (Math.abs(cur - tgt) > 0.001) animating = true;
+    if ((cur > 0.01) !== before) visibilityChanged = true;
+  });
+  // When a node crosses the visibility threshold, refresh the accessor so
+  // force-graph starts/stops rendering it (and its links).
+  if (visibilityChanged) applyVisibility();
+  if (animating) revealRaf = requestAnimationFrame(tickReveal);
+}
 /* ---- Visual state: calm at rest, rich on hover / focus ---- */
 function getNodeVisualState(node) {
   const inSubgraph = highlightNodes.size === 0 || highlightNodes.has(node.id);
@@ -186,10 +232,11 @@ function getNodeVisualState(node) {
   const isFocusCenter = focusNode && focusNode.id === node.id;
   const isHub = node.id === "me";
   const isHovered = hoverNode && hoverNode.id === node.id;
+  const ra = revealAlpha(node);   // 1 for non-skills; 0..1 fade for skills
 
   return {
-    opacity: dim ? (interacting ? 0.18 : 1) : 1,
-    scale: dim && interacting ? 0.9 : 1,
+    opacity: (dim ? (interacting ? 0.18 : 1) : 1) * ra,
+    scale: (dim && interacting ? 0.9 : 1) * (node.group === "skill" ? 0.62 + 0.38 * ra : 1),
     showGlow: isHub || isFocusCenter || isHovered,
     glowAlpha: isFocusCenter ? 0.16 : isHovered ? 0.12 : isHub ? 0.05 : 0,
     showRing: isFocusCenter,
@@ -283,6 +330,31 @@ function drawNodeDecor(node, ctx, scale) {
     ctx.globalCompositeOperation = "source-over";
   }
 
+  // Tasteful depth on top of the flat base circle: light from above + a soft
+  // edge vignette read as a raised token, not a glossy sphere.
+  if (useFullRenderer && R > 2) {
+    const op = vs.opacity;
+    // Top sheen
+    const sy = y - R * 0.32;
+    const sheen = ctx.createRadialGradient(x, sy, R * 0.08, x, sy, R * 1.05);
+    sheen.addColorStop(0, `rgba(255,255,255,${0.18 * op})`);
+    sheen.addColorStop(0.55, `rgba(255,255,255,${0.05 * op})`);
+    sheen.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2);
+    ctx.fillStyle = sheen; ctx.fill();
+    // Edge vignette
+    const vig = ctx.createRadialGradient(x, y, R * 0.6, x, y, R);
+    vig.addColorStop(0, "rgba(0,0,0,0)");
+    vig.addColorStop(1, `rgba(0,0,0,${0.24 * op})`);
+    ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2);
+    ctx.fillStyle = vig; ctx.fill();
+    // Crisp lighter rim for definition against the dark background
+    ctx.beginPath(); ctx.arc(x, y, Math.max(R - 0.5 / scale, 1), 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(${lightenHex(vs.color, 0.4)},${0.45 * op})`;
+    ctx.lineWidth = 1 / scale;
+    ctx.stroke();
+  }
+
   // Selection ring — focused node only
   if (useFullRenderer && vs.showRing) {
     ctx.beginPath();
@@ -321,6 +393,9 @@ function drawLinkDecor(link, ctx, scale) {
 
   const highlighted = highlightLinks.has(link);
   const interacting = highlightNodes.size > 0 || focusNode != null;
+  // Fade links in/out with the reveal of any skill endpoint.
+  const la = Math.min(revealAlpha(s), revealAlpha(t));
+  if (la <= 0.01) return;
   const mx = (s.x + t.x) / 2, my = (s.y + t.y) / 2;
   const dx = t.x - s.x, dy = t.y - s.y;
   const cpx = mx + dy * LINK_CURVE;
@@ -331,10 +406,12 @@ function drawLinkDecor(link, ctx, scale) {
   ctx.moveTo(s.x, s.y);
   ctx.quadraticCurveTo(cpx, cpy, t.x, t.y);
   if (highlighted) {
-    ctx.strokeStyle = "rgba(110,240,220,0.9)";
+    ctx.strokeStyle = `rgba(110,240,220,${0.9 * la})`;
     ctx.lineWidth = 2.2 / scale;
   } else {
-    ctx.strokeStyle = interacting ? "rgba(140,155,180,0.16)" : "rgba(150,165,190,0.55)";
+    ctx.strokeStyle = interacting
+      ? `rgba(140,155,180,${0.16 * la})`
+      : `rgba(150,165,190,${0.55 * la})`;
     ctx.lineWidth = 1.4 / scale;
   }
   ctx.stroke();
@@ -519,11 +596,11 @@ function initGraph() {
   if (Graph.autoPauseRedraw) Graph.autoPauseRedraw(false);
   Graph.resumeAnimation();
 
-  Graph.d3Force("charge").strength(-440);
+  Graph.d3Force("charge").strength(-460);
   Graph.d3Force("link").distance(l => {
     const sg = l.source.group || "";
     const tg = l.target.group || "";
-    return (sg === "skill" || tg === "skill") ? 64 : 110;
+    return (sg === "skill" || tg === "skill") ? 76 : 116;
   });
   applyClusterForces(Graph);
 
