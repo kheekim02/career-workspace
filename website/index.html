@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260629a">
+  <link rel="stylesheet" href="styles.css?v=20260629b">
 </head>
 <body>
 
@@ -67,7 +67,15 @@
 
       <aside id="graph-panel" class="graph-panel">
         <div class="panel-default">
-          <p class="panel-hint" data-i18n="panel_hint">◍ Click a node to inspect</p>
+          <p class="panel-eyebrow" data-i18n="panel_eyebrow">THE GRAPH</p>
+          <p class="panel-intro" data-i18n="panel_intro">
+            A live map of my career — how I connect to the organizations I've worked with,
+            the projects I've built, and the tools I use. Larger nodes are more central;
+            color marks the type. Hover to trace a connection, click to focus a node and
+            reorganize the graph around it.
+          </p>
+          <p class="panel-readkey" data-i18n="panel_readkey">Node size = how connected · Color = type</p>
+          <hr class="panel-divider" />
           <p class="legend-label" data-i18n="legend_filter">Filter by type — click to toggle</p>
           <ul class="legend" id="graph-legend">
             <li class="legend-item active" data-group="person" role="button" tabindex="0">
@@ -225,6 +233,6 @@
   </section>
 
   <script src="vendor/force-graph.min.js?v=20260629a"></script>
-  <script src="app.js?v=20260629a"></script>
+  <script src="app.js?v=20260629b"></script>
 </body>
 </html>

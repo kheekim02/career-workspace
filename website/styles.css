@@ -220,6 +220,31 @@ body::before {
   padding: 22px;
   overflow-y: auto;
 }
+.panel-eyebrow {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  color: var(--accent);
+  margin-bottom: 10px;
+}
+.panel-intro {
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--ink);
+  opacity: 0.82;
+  margin-bottom: 14px;
+}
+.panel-readkey {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--muted);
+  padding: 8px 10px;
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 18px;
+}
+.panel-divider { border: 0; border-top: 1px solid var(--border); margin: 16px 0; }
 .panel-hint { font-family: var(--mono); color: var(--muted); font-size: 13px; margin-bottom: 12px; }
 .legend-label {
   font-family: var(--mono);

@@ -79,10 +79,14 @@ const DEGREE = {};
 NODES.forEach(n => { DEGREE[n.id] = 0; });
 LINK_DEFS.forEach(([s, t]) => { DEGREE[s]++; DEGREE[t]++; });
 
+// Meaningful sizing: clear tier by role, refined by how connected the node is.
+//   me (hub) > projects & orgs (anchors) > skills (leaves)
 function nodeSize(node) {
   const d = DEGREE[node.id] || 1;
-  if (node.id === "me") return 22 + d * 1.2;
-  return 8 + d * 2.2;
+  if (node.id === "me") return 40;
+  if (node.group === "project") return 22 + d * 1.4;
+  if (node.group === "org") return 18 + d * 1.2;
+  return 11 + d * 1.2; // skills
 }
 
 // Single persistent dataset — nodes keep their positions across filtering.
@@ -151,14 +155,14 @@ function getNodeVisualState(node) {
   const isHovered = hoverNode && hoverNode.id === node.id;
 
   return {
-    opacity: dim ? (interacting ? 0.14 : 1) : 1,
-    scale: dim && interacting ? 0.88 : 1,
+    opacity: dim ? (interacting ? 0.18 : 1) : 1,
+    scale: dim && interacting ? 0.9 : 1,
     showGlow: isHub || isFocusCenter || isHovered,
     glowAlpha: isFocusCenter ? 0.16 : isHovered ? 0.12 : isHub ? 0.05 : 0,
     showRing: isFocusCenter,
     showGlyph: interacting && inSubgraph,
-    showLabel: isHub || (interacting && inSubgraph),
-    labelBright: isHub || isFocusCenter || isHovered,
+    showLabel: true,
+    labelBright: !interacting || inSubgraph,
     color: COLORS[node.group] || "#888",
   };
 }
@@ -172,19 +176,42 @@ function nodeRadius(node) {
   return Math.sqrt(Math.max(node.val, 1)) * 4;
 }
 
-/* Plain text label — no pill box */
+/* Label with a subtle dark backing plate for legibility over links/nodes */
 function drawLabelPlain(node, ctx, scale, r, vs) {
   if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return;
   scale = safeScale(scale);
-  const fontSize = Math.max(9 / scale, 3.2);
-  const fontWeight = node.id === "me" ? 600 : 400;
-  ctx.font = `${fontWeight} ${fontSize}px Inter, Arial, sans-serif`;
+  const isHub = node.id === "me";
+  const fontSize = Math.max((isHub ? 11 : 9.5) / scale, 3.4);
+  ctx.font = `${isHub ? 700 : 500} ${fontSize}px Inter, Arial, sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
+
+  const text = node.label;
+  const tw = ctx.measureText(text).width;
+  const padX = 4 / scale;
+  const padY = 2 / scale;
+  const top = node.y + r + 4 / scale;
+  const op = vs.opacity;
+
+  // Backing plate — keeps text readable against lines and dimmed nodes
+  ctx.fillStyle = `rgba(8,12,18,${(vs.labelBright ? 0.72 : 0.45) * op})`;
+  roundRect(ctx, node.x - tw / 2 - padX, top - padY, tw + padX * 2, fontSize + padY * 2, 3 / scale);
+  ctx.fill();
+
   ctx.fillStyle = vs.labelBright
-    ? `rgba(230,237,243,${0.9 * vs.opacity})`
-    : `rgba(180,190,205,${0.5 * vs.opacity})`;
-  ctx.fillText(node.label, node.x, node.y + r + 3 / scale);
+    ? `rgba(236,242,248,${0.96 * op})`
+    : `rgba(170,182,198,${0.7 * op})`;
+  ctx.fillText(text, node.x, top);
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
 }
 
 const LINK_CURVE = 0.06;
@@ -270,20 +297,25 @@ function drawLinkDecor(link, ctx, scale) {
   ctx.moveTo(s.x, s.y);
   ctx.quadraticCurveTo(cpx, cpy, t.x, t.y);
   if (highlighted) {
-    ctx.strokeStyle = "rgba(94,234,212,0.75)";
-    ctx.lineWidth = 1.8 / scale;
+    ctx.strokeStyle = "rgba(110,240,220,0.9)";
+    ctx.lineWidth = 2.2 / scale;
   } else {
-    ctx.strokeStyle = interacting ? "rgba(100,115,135,0.1)" : "rgba(100,115,135,0.28)";
-    ctx.lineWidth = 0.8 / scale;
+    ctx.strokeStyle = interacting ? "rgba(140,155,180,0.16)" : "rgba(150,165,190,0.55)";
+    ctx.lineWidth = 1.4 / scale;
   }
   ctx.stroke();
 
   if (highlighted && link.rel) {
     const lx = 0.25 * s.x + 0.5 * cpx + 0.25 * t.x;
     const ly = 0.25 * s.y + 0.5 * cpy + 0.25 * t.y;
-    const fs = Math.max(7.5 / scale, 3);
-    ctx.font = `400 ${fs}px "JetBrains Mono", ui-monospace, monospace`;
-    ctx.fillStyle = "rgba(94,234,212,0.8)";
+    const fs = Math.max(8 / scale, 3.2);
+    ctx.font = `500 ${fs}px "JetBrains Mono", ui-monospace, monospace`;
+    const tw = ctx.measureText(link.rel).width;
+    const pad = 3 / scale;
+    ctx.fillStyle = "rgba(8,12,18,0.82)";
+    roundRect(ctx, lx - tw / 2 - pad, ly - fs / 2 - pad, tw + pad * 2, fs + pad * 2, 3 / scale);
+    ctx.fill();
+    ctx.fillStyle = "rgba(120,245,225,0.95)";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(link.rel, lx, ly);
@@ -606,6 +638,12 @@ const I18N = {
     "My career as a graph — the way I build my systems. Click a node to pull it to the center and watch the graph reorganize. Hover to trace connections, and use the legend to filter by type.",
     "그래프로 표현한 제 커리어 — 제가 시스템을 만드는 방식 그대로. 노드를 클릭하면 중앙으로 끌려오며 그래프가 재배치됩니다. 호버해 연결을 추적하고, 범례로 유형을 필터링하세요."
   ],
+  panel_eyebrow: ["THE GRAPH", "그래프 소개"],
+  panel_intro: [
+    "A live map of my career — how I connect to the organizations I've worked with, the projects I've built, and the tools I use. Larger nodes are more central; color marks the type. Hover to trace a connection, click to focus a node and reorganize the graph around it.",
+    "제 커리어를 실시간으로 보여주는 지도 — 함께한 조직, 직접 만든 프로젝트, 사용하는 기술의 연결 관계입니다. 노드가 클수록 더 중심적이며, 색은 유형을 나타냅니다. 호버하면 연결을 추적하고, 클릭하면 해당 노드를 중심으로 그래프가 재배치됩니다."
+  ],
+  panel_readkey: ["Node size = how connected · Color = type", "노드 크기 = 연결 정도 · 색 = 유형"],
   panel_hint: ["◍ Click a node to inspect", "◍ 노드를 클릭해 살펴보세요"],
   legend_filter: ["Filter by type — click to toggle", "유형별 필터 — 클릭하여 전환"],
   legend_me: ["Me", "나"],
