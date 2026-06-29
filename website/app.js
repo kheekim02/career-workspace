@@ -543,10 +543,15 @@ function buildRadialTargets(focus) {
   const others = visible.filter(n => n.id !== focus.id && !nb.has(n.id));
   const t = new Map();
   t.set(focus.id, { x: c.x, y: c.y });
+  // Stretch the rings horizontally to match the canvas aspect ratio, so the
+  // focused cluster fills the wide viewport instead of leaving empty sides.
+  const w = canvasEl.clientWidth || 800;
+  const h = canvasEl.clientHeight || 600;
+  const aspect = Math.max(1, Math.min(1.85, w / Math.max(h, 1)));
   const place = (list, radius, offset) => {
     list.forEach((n, i) => {
       const a = -Math.PI / 2 + offset + (i * 2 * Math.PI) / Math.max(list.length, 1);
-      t.set(n.id, { x: c.x + Math.cos(a) * radius, y: c.y + Math.sin(a) * radius });
+      t.set(n.id, { x: c.x + Math.cos(a) * radius * aspect, y: c.y + Math.sin(a) * radius });
     });
   };
   place(neigh, RING_INNER, 0);
@@ -554,6 +559,7 @@ function buildRadialTargets(focus) {
   return t;
 }
 
+let __focusFitTimer = null;
 function focusOnNode(node) {
   if (!Graph) return;
   if (homePos.size === 0) captureHome();
@@ -562,16 +568,30 @@ function focusOnNode(node) {
   layoutTargets = buildRadialTargets(node);
   setFocusVignette(true);
   startLayoutLoop();
+  // Once the spring layout has mostly settled, zoom so the focused cluster
+  // fills the canvas (removes the large empty margins around a small cluster).
+  clearTimeout(__focusFitTimer);
+  __focusFitTimer = setTimeout(fitFocus, 480);
+}
+
+function fitFocus() {
+  if (!Graph || !focusNode) return;
+  const h = canvasEl.clientHeight || 600;
+  const pad = Math.round(Math.max(40, Math.min(80, h * 0.11)));
+  Graph.zoomToFit(620, pad, isNodeVisible);
 }
 
 function unfocus() {
   if (!Graph || !focusNode) return;
   focusNode = null;
+  clearTimeout(__focusFitTimer);
   const t = new Map();
   homePos.forEach((p, id) => t.set(id, { x: p.x, y: p.y }));
   layoutTargets = t;
   setFocusVignette(highlightNodes.size > 0);
   startLayoutLoop();
+  // Re-frame the whole graph once nodes have returned home.
+  setTimeout(() => fitGraph(560), 480);
 }
 
 function startLayoutLoop() {
