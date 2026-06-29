@@ -393,47 +393,26 @@ function drawNodeDecor(node, ctx, scale) {
   ctx.fillStyle = halo; ctx.fill();
   ctx.globalCompositeOperation = "source-over";
 
-  // Two-tone gradient fill (strong light from above → deeper at the base).
+  // Vibrant gradient fill: bright top → vivid base, only a touch deeper below.
   const grad = ctx.createLinearGradient(x, y - R, x, y + R);
-  grad.addColorStop(0, `rgb(${lightenHex(vs.color, 0.45)})`);
-  grad.addColorStop(0.45, `rgb(${cr},${cg},${cb})`);
-  grad.addColorStop(1, `rgb(${darkenHex(vs.color, 0.34)})`);
+  grad.addColorStop(0, `rgb(${lightenHex(vs.color, 0.55)})`);
+  grad.addColorStop(0.4, `rgb(${lightenHex(vs.color, 0.12)})`);
+  grad.addColorStop(1, `rgb(${darkenHex(vs.color, 0.1)})`);
   ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2);
   ctx.fillStyle = grad; ctx.fill();
 
-  // Matte grain, clipped to the node (scaled down on small nodes).
-  if (R > 3) {
-    const pat = getGrainPattern(ctx);
-    if (pat) {
-      const gAlpha = 0.13 * Math.max(0.5, Math.min(1, (R - 4) / 10));
-      ctx.save();
-      ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2); ctx.clip();
-      ctx.globalAlpha = gAlpha * op;
-      ctx.globalCompositeOperation = "overlay";
-      ctx.fillStyle = pat;
-      ctx.fillRect(x - R, y - R, R * 2, R * 2);
-      ctx.restore();
-    }
-  }
-
-  // Bevel: bright top highlight + darker lower inner edge for a raised look.
+  // Glossy top highlight for a clean, bright sheen.
   const sy = y - R * 0.36;
   const sheen = ctx.createRadialGradient(x, sy, R * 0.05, x, sy, R * 1.0);
-  sheen.addColorStop(0, `rgba(255,255,255,${(0.28 + 0.15 * hp) * op})`);
+  sheen.addColorStop(0, `rgba(255,255,255,${(0.34 + 0.18 * hp) * op})`);
   sheen.addColorStop(0.5, "rgba(255,255,255,0)");
   ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2);
   ctx.fillStyle = sheen; ctx.fill();
 
-  const inner = ctx.createRadialGradient(x, y, R * 0.55, x, y, R);
-  inner.addColorStop(0, "rgba(0,0,0,0)");
-  inner.addColorStop(1, `rgba(0,0,0,${0.28 * op})`);
-  ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2);
-  ctx.fillStyle = inner; ctx.fill();
-
   // Crisp rim — brightens toward white on hover for an obvious response.
-  const rimL = 0.45 + 0.45 * hp;
+  const rimL = 0.5 + 0.4 * hp;
   ctx.beginPath(); ctx.arc(x, y, Math.max(R - 0.6 / scale, 1), 0, Math.PI * 2);
-  ctx.strokeStyle = `rgba(${lightenHex(vs.color, rimL)},${(0.6 + 0.4 * hp) * op})`;
+  ctx.strokeStyle = `rgba(${lightenHex(vs.color, rimL)},${(0.7 + 0.3 * hp) * op})`;
   ctx.lineWidth = (1.4 + 1.2 * hp) / scale;
   ctx.stroke();
 
