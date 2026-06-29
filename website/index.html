@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500;1,9..144,600&family=Newsreader:opsz,wght@6..72,400;6..72,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260629o">
+  <link rel="stylesheet" href="styles.css?v=20260629p">
 </head>
 <body>
 
@@ -178,10 +178,8 @@
         <h3>Alpha Signals</h3>
         <span class="stamp" data-i18n="stamp_alpha">Live · Daily</span>
       </div>
-      <p class="proj-blurb" data-i18n="proj_alpha">
-        A quantitative research pipeline testing whether corporate events in SEC filings predict
-        stock returns — evolving from text sentiment to a Graph Neural Network over a Neo4j
-        knowledge graph, with a fully autonomous daily orchestration loop.
+      <p class="proj-blurb">
+        <strong class="lead">Tests whether filing events predict returns</strong> — a quant pipeline evolving from text sentiment to a Graph Neural Network over a Neo4j knowledge graph, running fully autonomously every trading day.
       </p>
       <div class="proj-flow" aria-label="Alpha Signals data pipeline">
         <span class="step">SEC EDGAR</span><span class="ar">→</span>
@@ -199,10 +197,8 @@
         <h3>PathWise</h3>
         <span class="stamp" data-i18n="stamp_pathwise">Shipped · iOS</span>
       </div>
-      <p class="proj-blurb" data-i18n="proj_pathwise">
-        An intelligent iOS running app that generates elevation-controlled, geofenced routing
-        loops with native turn-by-turn navigation — sub-2-second route generation via parallelized
-        spatial queries and a resilient, database-agnostic fallback.
+      <p class="proj-blurb">
+        <strong class="lead">Generates sub-2-second routing loops</strong> — an iOS running app with elevation-controlled, geofenced paths, native turn-by-turn navigation, and a database-agnostic fallback for <b class="num">100%</b> routing uptime.
       </p>
       <div class="proj-flow" aria-label="PathWise data pipeline">
         <span class="step">iOS Client <small>SwiftUI</small></span><span class="ar">→</span>
@@ -211,6 +207,23 @@
         <span class="step out">Routes &lt; 2s</span>
       </div>
       <p class="proj-tags">Stack — <b>Swift · SwiftUI · FastAPI · PostGIS · GraphHopper · Docker</b></p>
+    </article>
+
+    <article class="proj reveal">
+      <div class="proj-top">
+        <h3>Startup Scoring</h3>
+        <span class="stamp">Cleantech Open · UC Davis</span>
+      </div>
+      <p class="proj-blurb">
+        <strong class="lead">Predicts startup survival from accelerator data</strong> — an AI scoring system built with UC Davis CS (Prof. Vladimir Filkov), engineering features on Cleantech Open ventures (the world's largest cleantech accelerator, <b class="num">2,100+</b> startups) — now drawing interest from a <b class="num">Japanese national accelerator</b>.
+      </p>
+      <div class="proj-flow" aria-label="Startup scoring pipeline">
+        <span class="step">Cleantech Open <small>data</small></span><span class="ar">→</span>
+        <span class="step">Feature Engineering</span><span class="ar">→</span>
+        <span class="step">Scoring Model</span><span class="ar">→</span>
+        <span class="step out">Success likelihood</span>
+      </div>
+      <p class="proj-tags">Stack — <b>Python · Feature engineering · Cleantech Open · UC Davis CS</b></p>
     </article>
   </section>
 
@@ -262,9 +275,9 @@
     </footer>
   </section>
 
-  <script src="vendor/lenis.min.js?v=20260629m"></script>
+  <script src="vendor/lenis.min.js?v=20260629p"></script>
   <script src="vendor/force-graph.min.js?v=20260629a"></script>
-  <script src="enhance.js?v=20260629m"></script>
-  <script src="app.js?v=20260629m"></script>
+  <script src="enhance.js?v=20260629p"></script>
+  <script src="app.js?v=20260629p"></script>
 </body>
 </html>
