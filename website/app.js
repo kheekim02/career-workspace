@@ -954,7 +954,7 @@ const I18N = {
   about_lang_detail: ["2 years lived in Korea during military service (2022–2024). Comfortable working and presenting in both languages.", "군 복무로 한국에서 2년 거주 (2022–2024). 두 언어 모두로 업무와 발표가 가능합니다."],
   contact_title: ["Get in touch", "연락처"],
   contact_sub: ["Open to data engineering & analytics roles. Let's talk.", "데이터 엔지니어링 및 분석 직무에 열려 있습니다. 편하게 연락 주세요."],
-  footer_built: ["Built with vanilla JS + force-graph · hosted on Cloudflare Pages", "바닐라 JS + force-graph로 제작 · Cloudflare Pages 호스팅"],
+  footer_built: ["Built with vanilla JS + force-graph · hosted on Cloudflare Workers", "바닐라 JS + force-graph로 제작 · Cloudflare Workers 호스팅"],
 };
 
 // Site is English-only; panel descriptions read the English `desc` field.
