@@ -821,18 +821,34 @@ document.getElementById("graph-reset").addEventListener("click", () => {
 const I18N = {
   nav_graph: ["Graph", "그래프"],
   nav_experience: ["Experience", "경력"],
-  nav_projects: ["Projects", "프로젝트"],
+  nav_projects: ["Work", "작업"],
   nav_about: ["About", "소개"],
   nav_contact: ["Contact", "연락처"],
-  hero_eyebrow: ["data engineer · uc berkeley data science", "데이터 엔지니어 · uc 버클리 데이터 사이언스"],
-  hero_tagline: [
-    "I build and scale production data pipelines, multi-terabyte data lakes and warehouses, and ML/NLP systems — from SEC filing graphs to real-time routing engines.",
-    "프로덕션 데이터 파이프라인, 멀티 테라바이트 데이터 레이크·웨어하우스, ML/NLP 시스템을 구축하고 확장합니다 — SEC 공시 그래프부터 실시간 라우팅 엔진까지."
+  mh_left: ["Data Engineering · Quantitative Research", "데이터 엔지니어링 · 퀀트 리서치"],
+  mh_right: ["San Francisco Bay Area", "샌프란시스코 베이 에어리어"],
+  dl_vol: ["Vol. 01 — Portfolio", "Vol. 01 — 포트폴리오"],
+  dl_school: ["UC Berkeley, Data Science '26", "UC 버클리, 데이터 사이언스 '26"],
+  dl_bi: ["Bilingual · EN / 한국어", "이중 언어 · EN / 한국어"],
+  hero_headline: [
+    "The engineer who builds the <em>pipeline</em>, not just the product.",
+    "제품이 아니라 그 <em>파이프라인</em>을 만드는 엔지니어."
   ],
-  stat_filings: ["filings ingested", "공시 수집"],
-  stat_records: ["records managed", "레코드 관리"],
-  stat_entities: ["entities tracked", "기업 추적"],
-  hero_explore: ["Explore my work ↓", "내 작업 보기 ↓"],
+  lede_first: ["I design and scale", "저는 설계하고 확장합니다 —"],
+  lede_rest: [
+    "production data pipelines, multi-terabyte data lakes and warehouses, and ML/NLP systems — from SEC filing graphs to real-time routing engines.",
+    "프로덕션 데이터 파이프라인, 멀티 테라바이트 데이터 레이크·웨어하우스, ML/NLP 시스템을 — SEC 공시 그래프부터 실시간 라우팅 엔진까지."
+  ],
+  byline_role: ["Financial Data Analyst, Global Key Advisors", "재무 데이터 분석가, Global Key Advisors"],
+  metric_label: ["Filings ingested", "수집한 공시"],
+  metric_sub: ["33M records · 28K entities", "3,300만 레코드 · 28K 기업"],
+  metric_live: ["Pipeline live", "파이프라인 가동 중"],
+  fig_filings: ["Filings ingested", "수집한 공시"],
+  fig_records: ["Records managed", "관리 레코드"],
+  fig_llm: ["LLM throughput", "LLM 처리량"],
+  fig_gpa: ["GPA · 3-yr degree", "GPA · 3년 졸업"],
+  stamp_alpha: ["Live · Daily", "가동 중 · 매일"],
+  stamp_pathwise: ["Shipped · iOS", "출시 · iOS"],
+  hero_explore: ["Read the work", "작업 살펴보기"],
   hero_contact: ["Get in touch", "연락하기"],
   graph_title: ["Knowledge Graph", "지식 그래프"],
   graph_sub: [
@@ -871,7 +887,7 @@ const I18N = {
     "Engineered an unattended NLP pipeline converting raw filing text into a Neo4j corporate-relationship knowledge graph.",
     "원시 공시 텍스트를 Neo4j 기업 관계 지식 그래프로 변환하는 무인 NLP 파이프라인을 구축했습니다."
   ],
-  proj_title: ["Data Architecture Projects", "데이터 아키텍처 프로젝트"],
+  proj_title: ["Selected Work", "주요 작업"],
   proj_sub: ["The pipelines, not just the products. Each project shown as the system it really is.", "결과물뿐 아니라 파이프라인까지. 각 프로젝트를 실제 시스템 그대로 보여줍니다."],
   proj_alpha: [
     "A quantitative research pipeline testing whether corporate events in SEC filings predict stock returns — evolving from text sentiment to a Graph Neural Network over a Neo4j knowledge graph, with a fully autonomous daily orchestration loop.",
@@ -897,10 +913,16 @@ const I18N = {
 let currentLang = "en";
 function applyLang(lang) {
   currentLang = lang;
+  const idx = lang === "ko" ? 1 : 0;
   document.documentElement.lang = lang === "ko" ? "ko" : "en";
   document.querySelectorAll("[data-i18n]").forEach(el => {
     const key = el.getAttribute("data-i18n");
-    if (I18N[key]) el.textContent = I18N[key][lang === "ko" ? 1 : 0];
+    if (I18N[key]) el.textContent = I18N[key][idx];
+  });
+  // Keys whose value contains markup (e.g. the gold <em> in the headline).
+  document.querySelectorAll("[data-i18n-html]").forEach(el => {
+    const key = el.getAttribute("data-i18n-html");
+    if (I18N[key]) el.innerHTML = I18N[key][idx];
   });
   document.querySelector(".lang-en").classList.toggle("active", lang === "en");
   document.querySelector(".lang-ko").classList.toggle("active", lang === "ko");
@@ -947,7 +969,11 @@ function showGraphFallback() {
    Captures JS errors and detects a stalled render loop, then prints the
    findings over the graph so a screenshot is enough to diagnose. */
 const __diag = { errors: [], frames: 0, started: Date.now() };
+const __debug = /[?&]debug=1/.test(location.search);
 function showDiag(extra) {
+  // Visible diagnostic overlay is opt-in (?debug=1) so it never surfaces to
+  // visitors; real errors are still logged to the console below.
+  if (!__debug) return;
   let box = document.getElementById("graph-diag");
   if (!box) {
     box = document.createElement("div");
