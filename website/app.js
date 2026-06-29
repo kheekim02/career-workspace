@@ -910,27 +910,8 @@ const I18N = {
   footer_built: ["Built with vanilla JS + force-graph · hosted on Cloudflare Pages", "바닐라 JS + force-graph로 제작 · Cloudflare Pages 호스팅"],
 };
 
-let currentLang = "en";
-function applyLang(lang) {
-  currentLang = lang;
-  const idx = lang === "ko" ? 1 : 0;
-  document.documentElement.lang = lang === "ko" ? "ko" : "en";
-  document.querySelectorAll("[data-i18n]").forEach(el => {
-    const key = el.getAttribute("data-i18n");
-    if (I18N[key]) el.textContent = I18N[key][idx];
-  });
-  // Keys whose value contains markup (e.g. the gold <em> in the headline).
-  document.querySelectorAll("[data-i18n-html]").forEach(el => {
-    const key = el.getAttribute("data-i18n-html");
-    if (I18N[key]) el.innerHTML = I18N[key][idx];
-  });
-  document.querySelector(".lang-en").classList.toggle("active", lang === "en");
-  document.querySelector(".lang-ko").classList.toggle("active", lang === "ko");
-  if (!panelDetail.hidden && hoverNode) showPanel(hoverNode);
-}
-document.getElementById("lang-toggle").addEventListener("click", () => {
-  applyLang(currentLang === "en" ? "ko" : "en");
-});
+// Site is English-only; panel descriptions read the English `desc` field.
+const currentLang = "en";
 
 /* ---------- 11. Animated stat counters ---------- */
 function animateCounters() {

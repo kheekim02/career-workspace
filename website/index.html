@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500;1,9..144,600&family=Newsreader:opsz,wght@6..72,400;6..72,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260629j">
+  <link rel="stylesheet" href="styles.css?v=20260629k">
 </head>
 <body>
 
@@ -27,17 +27,12 @@
     </div>
     <div class="nav-mid">
       <a href="#top" class="nav-brand">Kunhee <span class="gold">Kim</span></a>
-      <div style="display:flex;align-items:center;gap:clamp(14px,2vw,26px)">
-        <div class="nav-links">
-          <a href="#graph" data-i18n="nav_graph">Graph</a>
-          <a href="#experience" data-i18n="nav_experience">Experience</a>
-          <a href="#projects" data-i18n="nav_projects">Work</a>
-          <a href="#about" data-i18n="nav_about">About</a>
-          <a href="#contact" data-i18n="nav_contact">Contact</a>
-        </div>
-        <button id="lang-toggle" class="lang-toggle" aria-label="Toggle language">
-          <span class="lang-en active">EN</span><span class="lang-divider">/</span><span class="lang-ko">한</span>
-        </button>
+      <div class="nav-links">
+        <a href="#graph">Graph</a>
+        <a href="#experience">Experience</a>
+        <a href="#projects">Work</a>
+        <a href="#about">About</a>
+        <a href="#contact">Contact</a>
       </div>
     </div>
   </nav>
@@ -147,7 +142,7 @@
       <span class="section-num">02</span>
       <div><h2 data-i18n="exp_title">Experience</h2></div>
     </div>
-    <article class="entry reveal">
+    <article class="entry reveal" data-reveal="right">
       <div class="entry-meta">
         <div class="org">Global Key Advisors</div>
         <div class="role" data-i18n="exp_role">Financial Data Analyst</div>
@@ -221,14 +216,14 @@
       <span class="section-num">04</span>
       <div><h2 data-i18n="about_title">About</h2></div>
     </div>
-    <div class="about-grid reveal">
-      <div class="about-block">
+    <div class="about-grid" data-stagger>
+      <div class="about-block reveal" data-reveal="scale">
         <h3 data-i18n="about_edu">Education</h3>
         <p><strong>University of California, Berkeley</strong><br>
         <span data-i18n="about_degree">B.A. Data Science · May 2026</span></p>
         <p class="muted" data-i18n="about_edu_detail">GPA 3.81 · Completed in 3 years · Berkeley Changemaker &amp; Entrepreneurship &amp; Technology (SCET) Certificates</p>
       </div>
-      <div class="about-block">
+      <div class="about-block reveal" data-reveal="scale">
         <h3 data-i18n="about_lang">Bilingual</h3>
         <div class="lang-bars">
           <div class="lang-bar">
@@ -263,9 +258,9 @@
     </footer>
   </section>
 
-  <script src="vendor/lenis.min.js?v=20260629j"></script>
+  <script src="vendor/lenis.min.js?v=20260629k"></script>
   <script src="vendor/force-graph.min.js?v=20260629a"></script>
-  <script src="enhance.js?v=20260629j"></script>
-  <script src="app.js?v=20260629j"></script>
+  <script src="enhance.js?v=20260629k"></script>
+  <script src="app.js?v=20260629k"></script>
 </body>
 </html>

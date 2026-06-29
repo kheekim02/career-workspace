@@ -41,25 +41,73 @@
     });
   }
 
-  /* ---- SCROLL REVEALS ---- */
+  /* ---- SCROLL REVEALS (directional + staggered) ----
+     Enrich a few groups so their children animate in sequence: the pipeline
+     diagrams "build" step by step, and experience bullets cascade in. */
+  if (!reduced) {
+    document.querySelectorAll(".proj-flow").forEach((flow) => {
+      flow.setAttribute("data-stagger", "");
+      flow.querySelectorAll(".step").forEach((s) => {
+        s.classList.add("reveal");
+        s.setAttribute("data-reveal", "scale");
+      });
+    });
+    document.querySelectorAll(".entry-body ul").forEach((ul) => {
+      ul.setAttribute("data-stagger", "");
+      ul.querySelectorAll("li").forEach((li) => {
+        li.classList.add("reveal");
+        li.setAttribute("data-reveal", "up");
+      });
+    });
+    // Assign incremental delays to staggered children.
+    document.querySelectorAll("[data-stagger]").forEach((group) => {
+      const kids = group.querySelectorAll(":scope > .reveal");
+      kids.forEach((el, i) => { el.style.setProperty("--reveal-delay", (i * 0.08) + "s"); });
+    });
+  }
+
   const reveals = document.querySelectorAll(".reveal");
-  if ("IntersectionObserver" in window) {
+  if ("IntersectionObserver" in window && !reduced) {
     const io = new IntersectionObserver((entries) => {
       entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("visible"); io.unobserve(e.target); } });
-    }, { threshold: 0.12, rootMargin: "0px 0px -40px 0px" });
+    }, { threshold: 0.1, rootMargin: "0px 0px -8% 0px" });
     reveals.forEach((el) => io.observe(el));
   } else {
     reveals.forEach((el) => el.classList.add("visible"));
   }
 
-  /* ---- STICKY NAV STATE ---- */
+  /* ---- HERO PARALLAX + STICKY NAV STATE ---- */
   const nav = document.getElementById("nav");
-  function onScroll() {
-    const y = lenis ? lenis.scroll : window.scrollY;
+  const heroInner = document.querySelector(".hero-inner");
+  const heroCanvas = document.getElementById("pipeline-canvas");
+  let ticking = false;
+  function render(y) {
     if (nav) nav.classList.toggle("scrolled", y > 40);
+    if (reduced) return;
+    const vh = window.innerHeight || 800;
+    if (y <= vh) {
+      const p = y / vh;
+      if (heroInner) {
+        heroInner.style.transform = "translateY(" + (y * 0.22) + "px)";
+        heroInner.style.opacity = String(Math.max(1 - p * 1.25, 0));
+      }
+      if (heroCanvas) heroCanvas.style.transform = "translateY(" + (y * 0.12) + "px)";
+    }
+  }
+  function curY() {
+    if (lenis && typeof lenis.scroll === "number") return lenis.scroll;
+    return window.scrollY || window.pageYOffset || 0;
+  }
+  function onScroll() {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => { render(curY()); ticking = false; });
   }
   if (lenis) lenis.on("scroll", onScroll);
-  else window.addEventListener("scroll", onScroll, { passive: true });
+  // Also bind native scroll: Lenis drives real scrolling, so this fires for
+  // users and provides a fallback if the Lenis event is missed.
+  window.addEventListener("scroll", onScroll, { passive: true });
+  render(curY());
 
   /* ---- ANIMATED ETL PIPELINE (hero background) ---- */
   const canvas = document.getElementById("pipeline-canvas");
