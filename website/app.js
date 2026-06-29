@@ -12,10 +12,10 @@ const COLORS = {
 };
 
 const GROUP_ANCHORS = {
-  person:  { x: 0,   y: 0   },
-  org:     { x: -90, y: -70 },
-  project: { x: 90,  y: -50 },
-  skill:   { x: 0,   y: 95  },
+  person:  { x: 0,    y: 0    },
+  org:     { x: -160, y: -120 },
+  project: { x: 170,  y: -80  },
+  skill:   { x: 0,    y: 150  },
 };
 
 const NODES = [
@@ -43,6 +43,14 @@ const NODES = [
     desc: "Research with Prof. Jill Berrick: statistical modeling on national child-welfare data to inform foster-care policy. Built Tableau dashboards & the site (4,000+ views).",
     desc_ko: "Jill Berrick 교수와의 연구: 위탁 양육 정책 개선을 위한 전국 아동 복지 데이터 통계 모델링. Tableau 대시보드 및 웹사이트 구축 (4,000+ 조회수).",
     meta: ["Statistics", "Tableau", "Policy"] },
+  { id: "football", group: "project", label: "Football Analysis",
+    desc: "AI/ML football analytics platform that extracts real-time performance data from video. Computer-vision pipelines for player detection, multi-object tracking, and camera perspective transformation for spatial-temporal modeling.",
+    desc_ko: "영상에서 실시간 경기 데이터를 추출하는 AI/ML 축구 분석 플랫폼. 선수 감지, 다중 객체 추적, 카메라 원근 변환을 위한 컴퓨터 비전 파이프라인으로 시공간 모델링 수행.",
+    meta: ["YOLO", "OpenCV", "Tracking"] },
+  { id: "harmony", group: "project", label: "HarmonyAI",
+    desc: "100% offline macOS app that auto-generates musically-correct vocal harmonies. Detects key & pitch contour, computes diatonic shifts (3rds/5ths/octaves) via PSOLA, with a real-time waveform/mixing GUI.",
+    desc_ko: "음악적으로 정확한 보컬 화음을 자동 생성하는 100% 오프라인 macOS 앱. 키와 피치 컨투어를 감지하고 PSOLA로 다이어토닉 시프트(3도/5도/옥타브)를 계산하며, 실시간 파형/믹싱 GUI 제공.",
+    meta: ["librosa", "PSOLA", "PySide6"] },
   { id: "python",   group: "skill", label: "Python",     desc: "Primary language: Pandas, Polars, FastAPI, concurrent pipelines.", desc_ko: "주력 언어: Pandas, Polars, FastAPI, 동시성 파이프라인.", meta: ["Pandas","Polars","FastAPI"] },
   { id: "sql",      group: "skill", label: "SQL",        desc: "Advanced SQL, schema design, query-planner diagnostics, performance tuning.", desc_ko: "고급 SQL, 스키마 설계, 쿼리 플래너 진단, 성능 튜닝.", meta: ["Schema design","Tuning"] },
   { id: "postgres", group: "skill", label: "PostgreSQL", desc: "Research warehouse: 33M+ records, TOAST tuning, modular schemas.", desc_ko: "연구 웨어하우스: 3,300만+ 레코드, TOAST 튜닝, 모듈식 스키마.", meta: ["Warehouse","TOAST"] },
@@ -52,25 +60,31 @@ const NODES = [
   { id: "infra",    group: "skill", label: "Infra / DevOps", desc: "Linux, cron/systemd, SSH tunneling, Docker, multi-host orchestration.", desc_ko: "리눅스, cron/systemd, SSH 터널링, Docker, 멀티 호스트 오케스트레이션.", meta: ["Linux","Docker"] },
   { id: "swift",    group: "skill", label: "Swift / iOS", desc: "SwiftUI, MapKit, ActivityKit, AVFoundation native development.", desc_ko: "SwiftUI, MapKit, ActivityKit, AVFoundation 네이티브 개발.", meta: ["SwiftUI","MapKit"] },
   { id: "tableau",  group: "skill", label: "Tableau",    desc: "Interactive dashboards for research & decision support.", desc_ko: "리서치 및 의사결정 지원을 위한 인터랙티브 대시보드.", meta: ["Dashboards"] },
+  { id: "cv",       group: "skill", label: "Computer Vision", desc: "Real-time video analysis: YOLO detection, multi-object tracking, perspective transforms with OpenCV.", desc_ko: "실시간 영상 분석: YOLO 감지, 다중 객체 추적, OpenCV 기반 원근 변환.", meta: ["YOLO","OpenCV","Tracking"] },
+  { id: "dsp",      group: "skill", label: "Audio DSP",   desc: "Digital signal processing: pitch detection (pYIN), key estimation, and PSOLA harmony synthesis.", desc_ko: "디지털 신호 처리: 피치 감지(pYIN), 키 추정, PSOLA 화음 합성.", meta: ["librosa","PSOLA","pYIN"] },
 ];
 
 const LINK_DEFS = [
   ["me","gka","works at"], ["me","berkeley","studied at"],
   ["me","alpha","built"], ["me","pathwise","built"], ["me","fnf","researched"],
+  ["me","football","built"], ["me","harmony","built"],
   ["gka","alpha","powers"], ["berkeley","fnf","hosts"], ["berkeley","pathwise","incubated"],
   ["alpha","python","uses"], ["alpha","postgres","uses"], ["alpha","neo4j","uses"],
   ["alpha","ml","uses"], ["alpha","spark","uses"], ["alpha","infra","uses"],
   ["pathwise","swift","uses"], ["pathwise","python","uses"], ["pathwise","postgres","uses"], ["pathwise","infra","uses"],
   ["fnf","tableau","uses"], ["fnf","sql","uses"], ["fnf","ml","uses"],
+  ["football","python","uses"], ["football","ml","uses"], ["football","cv","uses"],
+  ["harmony","python","uses"], ["harmony","dsp","uses"],
   ["me","python","skills"], ["me","sql","skills"],
 ];
 
 /* Per-node glyph drawn inside the sphere (Rec 2) */
 const NODE_GLYPHS = {
   me: "◎", gka: "⌂", berkeley: "▣",
-  alpha: "◈", pathwise: "◉", fnf: "◆",
+  alpha: "◈", pathwise: "◉", fnf: "◆", football: "◐", harmony: "◑",
   python: "Py", sql: "SQL", postgres: "PG", neo4j: "N4",
   spark: "Sp", ml: "ML", infra: "Dev", swift: "Sw", tableau: "Tb",
+  cv: "CV", dsp: "DSP",
 };
 const GROUP_GLYPHS = { person: "◎", org: "◇", project: "◈", skill: "◆" };
 
@@ -102,16 +116,35 @@ let Graph = null;
 let hoverNode = null;
 let highlightNodes = new Set();
 let highlightLinks = new Set();
-let activeGroups = new Set(["person", "org", "project", "skill"]);
+let activeGroups = new Set(["person", "org", "project"]);
 let baseZoom = 1;
 let focusNode = null;
+
+/* Progressive disclosure: skills stay hidden until the visitor hovers/clicks a
+   node they belong to (keeps the default view uncluttered). The legend "Skills
+   & Tech" toggle pins them all on. */
+let revealedSkills = new Set();
+function skillsPinned() { return activeGroups.has("skill"); }
+function byId(id) { return graphData.nodes.find(n => n.id === id); }
+function updateRevealedSkills() {
+  revealedSkills.clear();
+  if (skillsPinned()) return;
+  const src = hoverNode || focusNode;
+  if (!src) return;
+  neighbors(src).ns.forEach(id => {
+    const n = byId(id);
+    if (n && n.group === "skill") revealedSkills.add(id);
+  });
+}
 
 /* ---- Shared render state ---- */
 let useFullRenderer = !/[?&]renderer=safe/.test(location.search);
 
 /* ---------- 3. Visibility-based filtering helpers ---------- */
 function isNodeVisible(node) {
-  return activeGroups.has(node.group);
+  if (activeGroups.has(node.group)) return true;
+  if (node.group === "skill" && revealedSkills.has(node.id)) return true;
+  return false;
 }
 function isLinkVisible(link) {
   const s = typeof link.source === "object" ? link.source : graphData.nodes.find(n => n.id === link.source);
@@ -161,7 +194,8 @@ function getNodeVisualState(node) {
     glowAlpha: isFocusCenter ? 0.16 : isHovered ? 0.12 : isHub ? 0.05 : 0,
     showRing: isFocusCenter,
     showGlyph: interacting && inSubgraph,
-    showLabel: true,
+    // Structural nodes always labeled; skill labels appear only on interaction.
+    showLabel: node.group === "skill" ? (interacting && inSubgraph) : true,
     labelBright: !interacting || inSubgraph,
     color: COLORS[node.group] || "#888",
   };
@@ -341,8 +375,8 @@ function applyRendererMode() {
 function applyClusterForces(g) {
   const fx = g.d3Force("x");
   const fy = g.d3Force("y");
-  if (fx) { fx.strength(0.06).x(n => (GROUP_ANCHORS[n.group] || { x: 0 }).x); }
-  if (fy) { fy.strength(0.06).y(n => (GROUP_ANCHORS[n.group] || { y: 0 }).y); }
+  if (fx) { fx.strength(0.09).x(n => (GROUP_ANCHORS[n.group] || { x: 0 }).x); }
+  if (fy) { fy.strength(0.09).y(n => (GROUP_ANCHORS[n.group] || { y: 0 }).y); }
 }
 
 /* ---------- 5. Click-to-center with magnetic reorganization ----------
@@ -460,6 +494,8 @@ function initGraph() {
         canvasEl.style.cursor = "grab";
         hoverNode = null;
       }
+      updateRevealedSkills();
+      applyVisibility();
       if (Graph) {
         Graph.nodeColor(nodeColor);
         Graph.linkDirectionalParticles(particleCount);
@@ -467,11 +503,15 @@ function initGraph() {
     })
     .onNodeClick(node => {
       showPanel(node);
+      updateRevealedSkills();
+      applyVisibility();
       focusOnNode(node);
     })
     .onBackgroundClick(() => {
       resetPanel();
       unfocus();
+      updateRevealedSkills();
+      applyVisibility();
     });
 
   applyRendererMode();
@@ -479,11 +519,11 @@ function initGraph() {
   if (Graph.autoPauseRedraw) Graph.autoPauseRedraw(false);
   Graph.resumeAnimation();
 
-  Graph.d3Force("charge").strength(-280);
+  Graph.d3Force("charge").strength(-440);
   Graph.d3Force("link").distance(l => {
     const sg = l.source.group || "";
     const tg = l.target.group || "";
-    return (sg === "skill" || tg === "skill") ? 50 : 85;
+    return (sg === "skill" || tg === "skill") ? 64 : 110;
   });
   applyClusterForces(Graph);
 
@@ -542,11 +582,17 @@ function updateDebug() {
 }
 
 /* ---------- 8. Legend filters (visibility-based) ---------- */
-function refreshVisibility() {
+function applyVisibility() {
   if (!Graph) return;
   Graph.nodeVisibility(isNodeVisible);
   Graph.linkVisibility(isLinkVisible);
   Graph.linkDirectionalParticles(particleCount);
+}
+
+function refreshVisibility() {
+  if (!Graph) return;
+  updateRevealedSkills();
+  applyVisibility();
   if (focusNode) {
     if (isNodeVisible(focusNode)) {
       layoutTargets = buildRadialTargets(focusNode);
@@ -643,7 +689,7 @@ const I18N = {
     "A live map of my career — how I connect to the organizations I've worked with, the projects I've built, and the tools I use. Larger nodes are more central; color marks the type. Hover to trace a connection, click to focus a node and reorganize the graph around it.",
     "제 커리어를 실시간으로 보여주는 지도 — 함께한 조직, 직접 만든 프로젝트, 사용하는 기술의 연결 관계입니다. 노드가 클수록 더 중심적이며, 색은 유형을 나타냅니다. 호버하면 연결을 추적하고, 클릭하면 해당 노드를 중심으로 그래프가 재배치됩니다."
   ],
-  panel_readkey: ["Node size = how connected · Color = type", "노드 크기 = 연결 정도 · 색 = 유형"],
+  panel_readkey: ["Node size = how connected · Color = type · Hover a project to reveal its tools", "노드 크기 = 연결 정도 · 색 = 유형 · 프로젝트에 호버하면 사용 기술이 나타납니다"],
   panel_hint: ["◍ Click a node to inspect", "◍ 노드를 클릭해 살펴보세요"],
   legend_filter: ["Filter by type — click to toggle", "유형별 필터 — 클릭하여 전환"],
   legend_me: ["Me", "나"],
