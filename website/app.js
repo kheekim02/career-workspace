@@ -610,6 +610,8 @@ function layoutTick() {
     n.__vy = ((n.__vy || 0) + (tg.y - n.y) * SPRING_K) * SPRING_D;
     n.x += n.__vx;
     n.y += n.__vy;
+    // Keep the d3 pin in sync so the (permanently warm) engine holds positions.
+    if (n.__pinned) { n.fx = n.x; n.fy = n.y; }
     if (Math.abs(tg.x - n.x) > 0.4 || Math.abs(tg.y - n.y) > 0.4 ||
         Math.abs(n.__vx) > 0.4 || Math.abs(n.__vy) > 0.4) moving = true;
   });
@@ -618,7 +620,10 @@ function layoutTick() {
   } else {
     layoutTargets.forEach((tg, id) => {
       const n = graphData.nodes.find(x => x.id === id);
-      if (n) { n.x = tg.x; n.y = tg.y; n.__vx = 0; n.__vy = 0; }
+      if (n) {
+        n.x = tg.x; n.y = tg.y; n.__vx = 0; n.__vy = 0;
+        if (n.__pinned) { n.fx = tg.x; n.fy = tg.y; }
+      }
     });
     if (!focusNode) layoutTargets = null;  // released: free nodes for dragging
   }
@@ -694,6 +699,17 @@ function initGraph() {
   setTimeout(() => {
     if (Graph && !focusNode) baseZoom = Graph.zoom();
     captureHome();
+    // Hold the engine permanently "running" so the render loop never stops
+    // painting (hover lift, reveal, focus and entrance all animate reliably).
+    // Pin every node to its settled spot so the warm engine doesn't drift them.
+    graphData.nodes.forEach(n => {
+      if (Number.isFinite(n.x) && Number.isFinite(n.y)) {
+        n.fx = n.x; n.fy = n.y; n.__pinned = true;
+      }
+    });
+    if (Graph.cooldownTicks) Graph.cooldownTicks(Infinity);
+    if (Graph.cooldownTime) Graph.cooldownTime(Infinity);
+    if (Graph.d3ReheatSimulation) Graph.d3ReheatSimulation();
   }, 2200);
   if (/[?&]debug=1/.test(location.search)) {
     window.__G = Graph;
