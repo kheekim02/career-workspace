@@ -105,7 +105,7 @@ function nodeSize(node) {
 
 // Single persistent dataset — nodes keep their positions across filtering.
 const graphData = {
-  nodes: NODES.map(n => ({ ...n, val: nodeSize(n), degree: DEGREE[n.id] })),
+  nodes: NODES.map((n, i) => ({ ...n, val: nodeSize(n), degree: DEGREE[n.id], __ei: i })),
   links: LINK_DEFS.map(([source, target, rel]) => ({ source, target, rel })),
 };
 
@@ -188,6 +188,42 @@ function lightenHex(hex, amt) {
   const [r, g, b] = hexRgb(hex);
   const f = v => Math.round(v + (255 - v) * amt);
   return `${f(r)},${f(g)},${f(b)}`;
+}
+function darkenHex(hex, amt) {
+  const [r, g, b] = hexRgb(hex);
+  const f = v => Math.round(v * (1 - amt));
+  return `${f(r)},${f(g)},${f(b)}`;
+}
+
+/* ---- Matte grain pattern (built once) ---- */
+let grainPattern = null;
+function getGrainPattern(ctx) {
+  if (grainPattern) return grainPattern;
+  const c = document.createElement("canvas");
+  c.width = c.height = 72;
+  const g = c.getContext("2d");
+  const img = g.createImageData(72, 72);
+  for (let i = 0; i < img.data.length; i += 4) {
+    const v = 90 + Math.random() * 110;
+    img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
+    img.data[i + 3] = 255;
+  }
+  g.putImageData(img, 0, 0);
+  grainPattern = ctx.createPattern(c, "repeat");
+  return grainPattern;
+}
+
+/* ---- Entrance timeline (staggered pop-in on first load) ---- */
+let entranceStart = 0;
+const ENTER_DUR = 520;     // ms per node
+const ENTER_STAGGER = 55;  // ms between nodes
+function entranceFactor(node) {
+  if (!entranceStart) return { o: 1, s: 1, dy: 0 };
+  const t = performance.now() - entranceStart - (node.__ei || 0) * ENTER_STAGGER;
+  if (t >= ENTER_DUR) return { o: 1, s: 1, dy: 0 };
+  if (t <= 0) return { o: 0, s: 0.7, dy: 10 };
+  const e = easeOutCubic(t / ENTER_DUR);
+  return { o: e, s: 0.7 + 0.3 * e, dy: 10 * (1 - e) };
 }
 
 /* ---- Reveal animation: skills fade + scale in/out smoothly ---- */
@@ -298,9 +334,11 @@ function roundRect(ctx, x, y, w, h, r) {
 
 const LINK_CURVE = 0.06;
 
-/* Built-in circle = flat base color. "After" pass adds interaction-only polish. */
+/* Full renderer paints the node itself (transparent base). Safe mode keeps a
+   reliable solid built-in circle. */
 function nodeColor(node) {
   const vs = getNodeVisualState(node);
+  if (useFullRenderer) return "rgba(0,0,0,0)";
   const [r, g, b] = hexRgb(vs.color);
   return `rgba(${r},${g},${b},${vs.opacity})`;
 }
@@ -314,52 +352,93 @@ function drawNodeDecor(node, ctx, scale) {
   if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return;
 
   const vs = getNodeVisualState(node);
-  const R = Math.max(nodeRadius(node) * vs.scale, 2);
-  const { x, y } = node;
+
+  // Hover lift: ease a per-node progress toward 1 while hovered.
+  const hovTarget = (hoverNode && hoverNode.id === node.id) ? 1 : 0;
+  node.__hp = (node.__hp ?? 0) + (hovTarget - (node.__hp ?? 0)) * 0.22;
+  if (node.__hp < 0.001) node.__hp = 0;
+  const lift = 1 + 0.12 * node.__hp;
+
+  // Staggered entrance on first load.
+  const ent = entranceFactor(node);
+
+  const op = vs.opacity * ent.o;
+  if (op <= 0.001) return;
+  const x = node.x;
+  const y = node.y + ent.dy;
+  const R = Math.max(nodeRadius(node) * vs.scale * lift * ent.s, 2);
   const [cr, cg, cb] = hexRgb(vs.color);
 
   ctx.save();
-  ctx.globalAlpha = vs.opacity;
 
-  // Subtle glow — hub at rest, stronger on hover / focus only
-  if (useFullRenderer && vs.showGlow && vs.glowAlpha > 0) {
-    ctx.globalCompositeOperation = "destination-over";
+  if (!useFullRenderer) {
+    // Safe mode: built-in circle is the node; just add label.
+    if (vs.showLabel) drawLabelPlain(node, ctx, scale, R, vs);
+    ctx.restore();
+    return;
+  }
+
+  ctx.globalAlpha = op;
+
+  // Contact shadow + glow sit behind everything (destination-over).
+  ctx.globalCompositeOperation = "destination-over";
+  const shR = R * (1.25 + 0.3 * node.__hp);
+  const shY = y + R * (0.22 + 0.1 * node.__hp);
+  const shadow = ctx.createRadialGradient(x, shY, R * 0.2, x, shY, shR);
+  shadow.addColorStop(0, `rgba(0,0,0,${(0.26 + 0.14 * node.__hp) * op})`);
+  shadow.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.beginPath(); ctx.arc(x, shY, shR, 0, Math.PI * 2);
+  ctx.fillStyle = shadow; ctx.fill();
+
+  if (vs.showGlow && vs.glowAlpha > 0) {
     ctx.beginPath();
     ctx.arc(x, y, R * 1.55, 0, Math.PI * 2);
     ctx.fillStyle = `rgba(${cr},${cg},${cb},${vs.glowAlpha})`;
     ctx.fill();
-    ctx.globalCompositeOperation = "source-over";
+  }
+  ctx.globalCompositeOperation = "source-over";
+
+  // Two-tone gradient fill (light from above → deeper at the base).
+  const grad = ctx.createLinearGradient(x, y - R, x, y + R);
+  grad.addColorStop(0, `rgb(${lightenHex(vs.color, 0.26)})`);
+  grad.addColorStop(0.5, `rgb(${cr},${cg},${cb})`);
+  grad.addColorStop(1, `rgb(${darkenHex(vs.color, 0.22)})`);
+  ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2);
+  ctx.fillStyle = grad; ctx.fill();
+
+  // Matte grain, clipped to the node (scaled down on small nodes).
+  if (R > 3) {
+    const pat = getGrainPattern(ctx);
+    if (pat) {
+      const gAlpha = 0.07 * Math.max(0.4, Math.min(1, (R - 4) / 10));
+      ctx.save();
+      ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2); ctx.clip();
+      ctx.globalAlpha = gAlpha * op;
+      ctx.globalCompositeOperation = "overlay";
+      ctx.fillStyle = pat;
+      ctx.fillRect(x - R, y - R, R * 2, R * 2);
+      ctx.restore();
+    }
   }
 
-  // Tasteful depth on top of the flat base circle: light from above + a soft
-  // edge vignette read as a raised token, not a glossy sphere. Scale the effect
-  // down on small nodes so skill dots stay clean.
-  if (useFullRenderer && R > 2) {
-    const d = Math.max(0.45, Math.min(1, (R - 4) / 10));   // depth intensity by size
-    const op = vs.opacity * d;
-    // Top sheen
-    const sy = y - R * 0.32;
-    const sheen = ctx.createRadialGradient(x, sy, R * 0.08, x, sy, R * 1.05);
-    sheen.addColorStop(0, `rgba(255,255,255,${0.18 * op})`);
-    sheen.addColorStop(0.55, `rgba(255,255,255,${0.05 * op})`);
-    sheen.addColorStop(1, "rgba(255,255,255,0)");
+  // Soft top highlight for a crisp, non-plastic sheen.
+  if (R > 2) {
+    const sy = y - R * 0.34;
+    const sheen = ctx.createRadialGradient(x, sy, R * 0.06, x, sy, R * 0.95);
+    sheen.addColorStop(0, `rgba(255,255,255,${0.16 * op})`);
+    sheen.addColorStop(0.6, "rgba(255,255,255,0)");
     ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2);
     ctx.fillStyle = sheen; ctx.fill();
-    // Edge vignette
-    const vig = ctx.createRadialGradient(x, y, R * 0.6, x, y, R);
-    vig.addColorStop(0, "rgba(0,0,0,0)");
-    vig.addColorStop(1, `rgba(0,0,0,${0.2 * op})`);
-    ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2);
-    ctx.fillStyle = vig; ctx.fill();
-    // Crisp lighter rim for definition against the dark background
-    ctx.beginPath(); ctx.arc(x, y, Math.max(R - 0.5 / scale, 1), 0, Math.PI * 2);
-    ctx.strokeStyle = `rgba(${lightenHex(vs.color, 0.4)},${0.4 * vs.opacity})`;
-    ctx.lineWidth = 1 / scale;
-    ctx.stroke();
   }
 
-  // Selection ring — focused node only
-  if (useFullRenderer && vs.showRing) {
+  // Crisp lighter rim for definition against the dark background.
+  ctx.beginPath(); ctx.arc(x, y, Math.max(R - 0.5 / scale, 1), 0, Math.PI * 2);
+  ctx.strokeStyle = `rgba(${lightenHex(vs.color, 0.45)},${0.5 * op})`;
+  ctx.lineWidth = 1 / scale;
+  ctx.stroke();
+
+  // Selection ring — focused node only.
+  if (vs.showRing) {
     ctx.beginPath();
     ctx.arc(x, y, R + 4 / scale, 0, Math.PI * 2);
     ctx.strokeStyle = vs.color;
@@ -367,8 +446,8 @@ function drawNodeDecor(node, ctx, scale) {
     ctx.stroke();
   }
 
-  // Glyph — visible in active subgraph only
-  if (useFullRenderer && vs.showGlyph) {
+  // Glyph — visible in active subgraph only.
+  if (vs.showGlyph) {
     const glyph = NODE_GLYPHS[node.id] || GROUP_GLYPHS[node.group] || "";
     if (glyph) {
       const gSize = Math.max(R * (glyph.length > 2 ? 0.36 : 0.48), 4 / scale);
@@ -598,6 +677,7 @@ function initGraph() {
   // autoPauseRedraw=true halts drawing once the engine cools.
   if (Graph.autoPauseRedraw) Graph.autoPauseRedraw(false);
   Graph.resumeAnimation();
+  entranceStart = performance.now();
 
   Graph.d3Force("charge").strength(-460);
   Graph.d3Force("link").distance(l => {
