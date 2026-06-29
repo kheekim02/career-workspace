@@ -355,9 +355,10 @@ function drawNodeDecor(node, ctx, scale) {
 
   // Hover lift: ease a per-node progress toward 1 while hovered.
   const hovTarget = (hoverNode && hoverNode.id === node.id) ? 1 : 0;
-  node.__hp = (node.__hp ?? 0) + (hovTarget - (node.__hp ?? 0)) * 0.22;
+  node.__hp = (node.__hp ?? 0) + (hovTarget - (node.__hp ?? 0)) * 0.25;
   if (node.__hp < 0.001) node.__hp = 0;
-  const lift = 1 + 0.12 * node.__hp;
+  const hp = node.__hp;
+  const lift = 1 + 0.2 * hp;
 
   // Staggered entrance on first load.
   const ent = entranceFactor(node);
@@ -380,29 +381,23 @@ function drawNodeDecor(node, ctx, scale) {
 
   ctx.globalAlpha = op;
 
-  // Contact shadow + glow sit behind everything (destination-over).
+  // Color halo behind the node: faint ambient separation at rest, strong on
+  // hover (replaces a black shadow, which is invisible on the dark canvas).
   ctx.globalCompositeOperation = "destination-over";
-  const shR = R * (1.25 + 0.3 * node.__hp);
-  const shY = y + R * (0.22 + 0.1 * node.__hp);
-  const shadow = ctx.createRadialGradient(x, shY, R * 0.2, x, shY, shR);
-  shadow.addColorStop(0, `rgba(0,0,0,${(0.26 + 0.14 * node.__hp) * op})`);
-  shadow.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.beginPath(); ctx.arc(x, shY, shR, 0, Math.PI * 2);
-  ctx.fillStyle = shadow; ctx.fill();
-
-  if (vs.showGlow && vs.glowAlpha > 0) {
-    ctx.beginPath();
-    ctx.arc(x, y, R * 1.55, 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(${cr},${cg},${cb},${vs.glowAlpha})`;
-    ctx.fill();
-  }
+  const haloA = Math.max(0.06, vs.glowAlpha, 0.4 * hp);
+  const haloR = R * (1.5 + 0.7 * hp);
+  const halo = ctx.createRadialGradient(x, y, R * 0.7, x, y, haloR);
+  halo.addColorStop(0, `rgba(${cr},${cg},${cb},${haloA})`);
+  halo.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
+  ctx.beginPath(); ctx.arc(x, y, haloR, 0, Math.PI * 2);
+  ctx.fillStyle = halo; ctx.fill();
   ctx.globalCompositeOperation = "source-over";
 
-  // Two-tone gradient fill (light from above → deeper at the base).
+  // Two-tone gradient fill (strong light from above → deeper at the base).
   const grad = ctx.createLinearGradient(x, y - R, x, y + R);
-  grad.addColorStop(0, `rgb(${lightenHex(vs.color, 0.26)})`);
-  grad.addColorStop(0.5, `rgb(${cr},${cg},${cb})`);
-  grad.addColorStop(1, `rgb(${darkenHex(vs.color, 0.22)})`);
+  grad.addColorStop(0, `rgb(${lightenHex(vs.color, 0.45)})`);
+  grad.addColorStop(0.45, `rgb(${cr},${cg},${cb})`);
+  grad.addColorStop(1, `rgb(${darkenHex(vs.color, 0.34)})`);
   ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2);
   ctx.fillStyle = grad; ctx.fill();
 
@@ -410,7 +405,7 @@ function drawNodeDecor(node, ctx, scale) {
   if (R > 3) {
     const pat = getGrainPattern(ctx);
     if (pat) {
-      const gAlpha = 0.07 * Math.max(0.4, Math.min(1, (R - 4) / 10));
+      const gAlpha = 0.13 * Math.max(0.5, Math.min(1, (R - 4) / 10));
       ctx.save();
       ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2); ctx.clip();
       ctx.globalAlpha = gAlpha * op;
@@ -421,20 +416,25 @@ function drawNodeDecor(node, ctx, scale) {
     }
   }
 
-  // Soft top highlight for a crisp, non-plastic sheen.
-  if (R > 2) {
-    const sy = y - R * 0.34;
-    const sheen = ctx.createRadialGradient(x, sy, R * 0.06, x, sy, R * 0.95);
-    sheen.addColorStop(0, `rgba(255,255,255,${0.16 * op})`);
-    sheen.addColorStop(0.6, "rgba(255,255,255,0)");
-    ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2);
-    ctx.fillStyle = sheen; ctx.fill();
-  }
+  // Bevel: bright top highlight + darker lower inner edge for a raised look.
+  const sy = y - R * 0.36;
+  const sheen = ctx.createRadialGradient(x, sy, R * 0.05, x, sy, R * 1.0);
+  sheen.addColorStop(0, `rgba(255,255,255,${(0.28 + 0.15 * hp) * op})`);
+  sheen.addColorStop(0.5, "rgba(255,255,255,0)");
+  ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2);
+  ctx.fillStyle = sheen; ctx.fill();
 
-  // Crisp lighter rim for definition against the dark background.
-  ctx.beginPath(); ctx.arc(x, y, Math.max(R - 0.5 / scale, 1), 0, Math.PI * 2);
-  ctx.strokeStyle = `rgba(${lightenHex(vs.color, 0.45)},${0.5 * op})`;
-  ctx.lineWidth = 1 / scale;
+  const inner = ctx.createRadialGradient(x, y, R * 0.55, x, y, R);
+  inner.addColorStop(0, "rgba(0,0,0,0)");
+  inner.addColorStop(1, `rgba(0,0,0,${0.28 * op})`);
+  ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2);
+  ctx.fillStyle = inner; ctx.fill();
+
+  // Crisp rim — brightens toward white on hover for an obvious response.
+  const rimL = 0.45 + 0.45 * hp;
+  ctx.beginPath(); ctx.arc(x, y, Math.max(R - 0.6 / scale, 1), 0, Math.PI * 2);
+  ctx.strokeStyle = `rgba(${lightenHex(vs.color, rimL)},${(0.6 + 0.4 * hp) * op})`;
+  ctx.lineWidth = (1.4 + 1.2 * hp) / scale;
   ctx.stroke();
 
   // Selection ring — focused node only.
