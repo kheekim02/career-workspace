@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500;1,9..144,600&family=Newsreader:opsz,wght@6..72,400;6..72,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260629k">
+  <link rel="stylesheet" href="styles.css?v=20260629l">
 </head>
 <body>
 
@@ -96,16 +96,18 @@
 
       <aside id="graph-panel" class="graph-panel">
         <div class="panel-default">
-          <p class="panel-eyebrow" data-i18n="panel_eyebrow">THE GRAPH</p>
-          <p class="panel-intro" data-i18n="panel_intro">
-            A live map of my career — how I connect to the organizations I've worked with,
-            the projects I've built, and the tools I use. Larger nodes are more central;
-            color marks the type. Hover to trace a connection, click to focus a node and
-            reorganize the graph around it.
-          </p>
-          <p class="panel-readkey" data-i18n="panel_readkey">Node size = how connected · Color = type · Hover a project to reveal its tools</p>
+          <div class="panel-scroll">
+            <p class="panel-eyebrow">THE GRAPH</p>
+            <p class="panel-intro">
+              A live map of my work — the organizations, projects, and tools I connect,
+              sized by how central each one is. Hover to trace a connection; click a node
+              to focus it and reorganize the graph.
+            </p>
+            <p class="panel-readkey">Node size = how connected · Color = type · Hover a project to reveal its tools</p>
+          </div>
+          <div class="panel-pin">
           <hr class="panel-divider" />
-          <p class="legend-label" data-i18n="legend_filter">Filter by type — click to toggle</p>
+          <p class="legend-label">Filter by type — click to toggle</p>
           <ul class="legend" id="graph-legend">
             <li class="legend-item active" data-group="person" role="button" tabindex="0">
               <span class="dot dot-person"></span><span data-i18n="legend_me">Me</span>
@@ -120,6 +122,7 @@
               <span class="dot dot-skill"></span><span data-i18n="legend_skill">Skills &amp; Tech</span>
             </li>
           </ul>
+          </div>
         </div>
         <div class="panel-detail" hidden>
           <span class="panel-tag" id="panel-tag"></span>
@@ -258,9 +261,9 @@
     </footer>
   </section>
 
-  <script src="vendor/lenis.min.js?v=20260629k"></script>
+  <script src="vendor/lenis.min.js?v=20260629l"></script>
   <script src="vendor/force-graph.min.js?v=20260629a"></script>
-  <script src="enhance.js?v=20260629k"></script>
-  <script src="app.js?v=20260629k"></script>
+  <script src="enhance.js?v=20260629l"></script>
+  <script src="app.js?v=20260629l"></script>
 </body>
 </html>

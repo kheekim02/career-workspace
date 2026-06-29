@@ -191,7 +191,15 @@ a { color: inherit; text-decoration: none; }
   padding: clamp(40px, 6vw, 76px) 0;
   max-width: 1080px; margin: 0 auto;
 }
-.graph-section { max-width: 1280px; padding-left: clamp(20px, 5vw, 56px); padding-right: clamp(20px, 5vw, 56px); }
+/* The graph is sized to fit one screen when reached from the nav: tighter
+   vertical padding, and the graph height fills the space left after the
+   heading and controls. */
+.graph-section {
+  max-width: 1280px;
+  padding: clamp(76px, 9vh, 104px) clamp(20px, 5vw, 56px) clamp(18px, 3vh, 36px);
+}
+.graph-section .section-head { margin-bottom: clamp(12px, 2vh, 24px); }
+.graph-section .section-sub { max-width: 760px; }
 .section-head {
   display: grid; grid-template-columns: auto 1fr; gap: 18px; align-items: baseline;
   border-top: 2px solid var(--border-strong); padding-top: 14px; margin-bottom: 34px;
@@ -217,7 +225,7 @@ a { color: inherit; text-decoration: none; }
 }
 
 /* ===== GRAPH ===== */
-.graph-wrap { display: grid; grid-template-columns: 1fr 320px; gap: 18px; height: 600px; }
+.graph-wrap { display: grid; grid-template-columns: 1fr 320px; gap: 18px; height: clamp(300px, calc(100vh - 360px), 600px); }
 .graph-viewport { position: relative; border: 1px solid var(--border-strong); border-radius: var(--radius); overflow: hidden; height: 100%; min-height: 0; }
 #graph-bg {
   position: absolute; inset: 0; width: 100%; height: 100%;
@@ -233,7 +241,13 @@ a { color: inherit; text-decoration: none; }
 }
 .graph-viewport.is-focused #graph-vignette { opacity: 1; }
 #graph-canvas:active { cursor: grabbing; }
-.graph-panel { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; overflow-y: auto; }
+.graph-panel { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
+/* intro text scrolls if the panel is short; the legend filters stay pinned
+   and always visible so the whole graph + its controls fit one screen */
+.panel-default { display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; }
+.panel-scroll { overflow-y: auto; min-height: 0; flex: 1 1 auto; }
+.panel-pin { flex: none; }
+.panel-detail { overflow-y: auto; min-height: 0; flex: 1 1 auto; }
 .panel-eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: 1.5px; color: var(--gold); margin-bottom: 10px; }
 .panel-intro { font-size: 14px; line-height: 1.6; color: var(--ink-soft); margin-bottom: 14px; }
 .panel-readkey { font-family: var(--mono); font-size: 11.5px; color: var(--muted); padding: 8px 10px; background: var(--bg-soft); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 18px; }

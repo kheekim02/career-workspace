@@ -673,7 +673,7 @@ function initGraph() {
 
   sizeGraph();
   [150, 500, 1000, 1800].forEach(t =>
-    setTimeout(() => { sizeGraph(); if (Graph && !focusNode) Graph.zoomToFit(500, 70); }, t)
+    setTimeout(() => { sizeGraph(); fitGraph(500); }, t)
   );
   setTimeout(() => {
     if (Graph && !focusNode) baseZoom = Graph.zoom();
@@ -698,11 +698,27 @@ function initGraph() {
   updateDebug();
 }
 
+/* Fit the whole graph (with breathing room scaled to the canvas height so
+   node labels never clip) into the current canvas. Never fights an active
+   focus/centering. */
+function fitGraph(ms) {
+  if (!Graph || focusNode) return;
+  const h = canvasEl.clientHeight || canvasEl.offsetHeight || 600;
+  const pad = Math.round(Math.max(46, Math.min(96, h * 0.13)));
+  Graph.zoomToFit(ms || 400, pad);
+}
+
+let __refitTimer = null;
 function sizeGraph() {
   if (!Graph) return;
   const w = canvasEl.clientWidth || canvasEl.offsetWidth || 800;
   const h = canvasEl.clientHeight || canvasEl.offsetHeight || 600;
   Graph.width(w).height(h);
+  // Re-fit to the resized canvas so the entire graph stays visible.
+  if (!focusNode) {
+    clearTimeout(__refitTimer);
+    __refitTimer = setTimeout(() => fitGraph(400), 160);
+  }
   updateDebug();
 }
 window.addEventListener("resize", sizeGraph);
