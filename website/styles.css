@@ -225,7 +225,7 @@ a { color: inherit; text-decoration: none; }
 }
 
 /* ===== GRAPH ===== */
-.graph-wrap { display: grid; grid-template-columns: 1fr 360px; gap: 24px; height: clamp(320px, calc(100vh - 338px), 640px); }
+.graph-wrap { display: grid; grid-template-columns: 1fr 360px; gap: 24px; height: clamp(320px, calc(100vh - 338px), 780px); }
 .graph-viewport { position: relative; border: 1px solid var(--border-strong); border-radius: var(--radius); overflow: hidden; height: 100%; min-height: 0; }
 #graph-bg {
   position: absolute; inset: 0; width: 100%; height: 100%;
@@ -245,9 +245,14 @@ a { color: inherit; text-decoration: none; }
 /* intro text scrolls if the panel is short; the legend filters stay pinned
    and always visible so the whole graph + its controls fit one screen */
 .panel-default { display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; }
-.panel-scroll { overflow-y: auto; min-height: 0; flex: 1 1 auto; }
+/* content sits at the top; the scroll region only shrinks (never grows) so a
+   tall panel doesn't open a gap between the intro and the pinned legend */
+.panel-scroll { overflow-y: auto; min-height: 0; flex: 0 1 auto; }
 .panel-pin { flex: none; }
-.panel-detail { overflow-y: auto; min-height: 0; flex: 1 1 auto; }
+.panel-detail { display: flex; flex-direction: column; overflow-y: auto; min-height: 0; flex: 1 1 auto; }
+/* the flex display above out-prioritises the bare [hidden] attribute, so the
+   two panel states would overlap — force the hidden one to truly disappear */
+.panel-default[hidden], .panel-detail[hidden] { display: none; }
 .panel-eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: 1.6px; color: var(--gold); margin-bottom: 14px; }
 .panel-intro { font-size: 14.5px; line-height: 1.72; color: var(--ink-soft); margin-bottom: 18px; }
 .panel-readkey { font-family: var(--mono); font-size: 11.5px; line-height: 1.55; color: var(--muted); padding: 11px 13px; background: var(--bg-soft); border: 1px solid var(--border); border-radius: 7px; margin-bottom: 6px; }
@@ -265,13 +270,13 @@ a { color: inherit; text-decoration: none; }
 .dot-project { background: var(--project); }
 .dot-skill { background: var(--skill); }
 
-.panel-tag { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; padding: 3px 10px; border-radius: 999px; display: inline-block; margin-bottom: 12px; }
-.panel-detail h3 { font-family: var(--display); font-weight: 600; font-size: 22px; margin-bottom: 10px; }
-.panel-detail p { color: var(--ink-soft); font-size: 14.5px; }
-.panel-meta { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 6px; }
-.panel-meta span { font-family: var(--mono); font-size: 12px; background: var(--bg-soft); border: 1px solid var(--border); padding: 4px 9px; border-radius: 5px; color: var(--gold); }
+.panel-tag { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; padding: 4px 11px; border-radius: 999px; display: inline-block; align-self: flex-start; margin-bottom: 16px; }
+.panel-detail h3 { font-family: var(--display); font-weight: 600; font-size: 25px; line-height: 1.15; margin-bottom: 12px; }
+.panel-detail p { color: var(--ink-soft); font-size: 15px; line-height: 1.68; }
+.panel-meta { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 7px; }
+.panel-meta span { font-family: var(--mono); font-size: 12px; background: var(--bg-soft); border: 1px solid var(--border); padding: 5px 10px; border-radius: 6px; color: var(--gold); }
 .panel-links { margin-top: 16px; }
-.panel-links a { color: var(--teal); font-family: var(--mono); font-size: 13px; }
+.panel-links a { color: var(--teal); font-family: var(--mono); font-size: 13px; word-break: break-all; }
 
 .graph-controls { display: flex; align-items: center; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
 .chip { font-family: var(--mono); font-size: 13px; background: var(--bg-card); border: 1px solid var(--border-strong); color: var(--ink); padding: 7px 14px; border-radius: 999px; cursor: pointer; transition: border-color .18s, background .18s; }
