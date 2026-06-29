@@ -191,11 +191,12 @@ function lightenHex(hex, amt) {
 }
 
 /* ---- Reveal animation: skills fade + scale in/out smoothly ---- */
-const skillReveal = new Map();   // id -> animated alpha 0..1
+const skillReveal = new Map();   // id -> linear progress 0..1
 let revealRaf = null;
+function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
 function revealAlpha(node) {
   if (node.group !== "skill") return 1;
-  return skillReveal.get(node.id) ?? 0;
+  return easeOutCubic(skillReveal.get(node.id) ?? 0);
 }
 function revealTarget(id) {
   return (skillsPinned() || revealedSkills.has(id)) ? 1 : 0;
@@ -212,7 +213,7 @@ function tickReveal() {
     const tgt = revealTarget(n.id);
     let cur = skillReveal.get(n.id) ?? 0;
     const before = cur > 0.01;
-    const step = 0.14;
+    const step = 0.11;
     if (cur < tgt) cur = Math.min(tgt, cur + step);
     else if (cur > tgt) cur = Math.max(tgt, cur - step);
     skillReveal.set(n.id, cur);
@@ -331,9 +332,11 @@ function drawNodeDecor(node, ctx, scale) {
   }
 
   // Tasteful depth on top of the flat base circle: light from above + a soft
-  // edge vignette read as a raised token, not a glossy sphere.
+  // edge vignette read as a raised token, not a glossy sphere. Scale the effect
+  // down on small nodes so skill dots stay clean.
   if (useFullRenderer && R > 2) {
-    const op = vs.opacity;
+    const d = Math.max(0.45, Math.min(1, (R - 4) / 10));   // depth intensity by size
+    const op = vs.opacity * d;
     // Top sheen
     const sy = y - R * 0.32;
     const sheen = ctx.createRadialGradient(x, sy, R * 0.08, x, sy, R * 1.05);
@@ -345,12 +348,12 @@ function drawNodeDecor(node, ctx, scale) {
     // Edge vignette
     const vig = ctx.createRadialGradient(x, y, R * 0.6, x, y, R);
     vig.addColorStop(0, "rgba(0,0,0,0)");
-    vig.addColorStop(1, `rgba(0,0,0,${0.24 * op})`);
+    vig.addColorStop(1, `rgba(0,0,0,${0.2 * op})`);
     ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2);
     ctx.fillStyle = vig; ctx.fill();
     // Crisp lighter rim for definition against the dark background
     ctx.beginPath(); ctx.arc(x, y, Math.max(R - 0.5 / scale, 1), 0, Math.PI * 2);
-    ctx.strokeStyle = `rgba(${lightenHex(vs.color, 0.4)},${0.45 * op})`;
+    ctx.strokeStyle = `rgba(${lightenHex(vs.color, 0.4)},${0.4 * vs.opacity})`;
     ctx.lineWidth = 1 / scale;
     ctx.stroke();
   }
